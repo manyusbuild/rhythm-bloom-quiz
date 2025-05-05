@@ -33,6 +33,8 @@ interface ChartData {
   };
   displayCycleLengthLabel: string;
   conditionMessage: string | null;
+  periodEndDay: number;
+  controlPoints: ChartPoint[];
 }
 
 /**
@@ -136,6 +138,9 @@ export const generateChartData = (results: QuizResults): ChartData => {
     peakDay = Math.floor(cycleLength / 2);
   }
   
+  // Ensure peak day is not too close to either end
+  peakDay = Math.max(Math.min(peakDay, cycleLength - 5), 5);
+  
   // Set peak fuzziness flag
   fuzziness.peak = peakEnergyConfig.fuzzy;
 
@@ -155,21 +160,30 @@ export const generateChartData = (results: QuizResults): ChartData => {
   // Set dip fuzziness flag
   fuzziness.dip = lowestEnergyConfig.fuzzy;
 
-  // Define the three key points as requested
+  // Always ensure start and end points are at energy level 1, and peak is at energy level 5
   const keyPoints = [
     { day: startDay, energy: 1 },    // Start point: day 1, low energy
-    { day: peakDay, energy: 5 },     // Peak energy point
+    { day: peakDay, energy: 5 },     // Peak energy point: always at level 5
     { day: endDay, energy: 1 }       // End point: cycle end, low energy
   ];
 
-  // Define control points
+  // Improved control points for smoother curves
+  // Control point 1: Between period end and peak, but closer to start for gentler slope
+  const controlPoint1Day = Math.floor((periodEndDay + peakDay) / 2);
+  const controlPoint1Energy = 3; // Mid-level energy for smoother rise
+  
+  // Control point 2: Between peak and end, influenced by lowest energy day
+  const controlPoint2Day = Math.floor((peakDay + endDay) / 2);
+  // If lowest day is closer to end, lower the control point energy for a deeper dip
+  const controlPoint2Energy = lowestDay > controlPoint2Day ? 2 : 3;
+  
   const controlPoints = [
-    { day: periodEndDay, energy: 2.5 },  // End of period, moderate energy
-    { day: Math.floor(cycleLength / 2), energy: 4 }  // Ovulation, high-ish energy
+    { day: controlPoint1Day, energy: controlPoint1Energy },
+    { day: controlPoint2Day, energy: controlPoint2Energy }
   ];
 
   // Generate Bezier curve using the key points and control points
-  const bezierPoints = generateSimplifiedBezierCurve(keyPoints, controlPoints, cycleLength);
+  const bezierPoints = generateEnhancedBezierCurve(keyPoints, controlPoints, cycleLength);
 
   // Generate data points for the full curve (for display and markers)
   const points: ChartPoint[] = [];
@@ -211,18 +225,20 @@ export const generateChartData = (results: QuizResults): ChartData => {
     },
     fuzziness,
     displayCycleLengthLabel,
-    conditionMessage: conditionConfig.message
+    conditionMessage: conditionConfig.message,
+    periodEndDay,
+    controlPoints
   };
 };
 
-// Generate a simplified bezier curve with 3 key points and 2 control points
-const generateSimplifiedBezierCurve = (
+// Generate an enhanced bezier curve with improved control points for smoother transitions
+const generateEnhancedBezierCurve = (
   keyPoints: ChartPoint[], 
   controlPoints: ChartPoint[], 
   cycleLength: number
 ): BezierPoint[] => {
   const bezierPoints: BezierPoint[] = [];
-  const numPoints = 100; // Number of points to generate along the curve
+  const numPoints = 200; // Increased number of points for smoother curve
   
   // Scale points to 0-1 range for x (day) and y (energy) values
   const scaledKeyPoints = keyPoints.map(point => ({
@@ -235,7 +251,7 @@ const generateSimplifiedBezierCurve = (
     y: (point.energy - 1) / 4  // Scale 1-5 to 0-1
   }));
   
-  // We'll create a composite bezier curve with two cubic bezier segments:
+  // Create a composite bezier curve with two cubic bezier segments:
   // 1. From start to peak: P0(start), C1(controlPoint1), C2(calculated), P3(peak)
   // 2. From peak to end: P0(peak), C1(calculated), C2(controlPoint2), P3(end)
   
@@ -248,7 +264,7 @@ const generateSimplifiedBezierCurve = (
     // Calculate the second control point to ensure smooth transition at the peak
     const c2 = {
       x: p3.x - (p3.x - c1.x) * 0.5,
-      y: p3.y
+      y: p3.y - 0.05 // Slight adjustment to ensure horizontal tangent at peak
     };
     
     // Calculate point on cubic bezier curve
@@ -265,7 +281,7 @@ const generateSimplifiedBezierCurve = (
     // Calculate the first control point to ensure smooth transition at the peak
     const c1 = {
       x: p0.x + (c2.x - p0.x) * 0.5,
-      y: p0.y
+      y: p0.y - 0.05 // Slight adjustment to ensure horizontal tangent at peak
     };
     
     // Calculate point on cubic bezier curve

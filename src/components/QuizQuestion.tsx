@@ -75,4 +75,3 @@ const QuizQuestion: React.FC<QuizQuestionProps> = ({
 };
 
 export default QuizQuestion;
-
