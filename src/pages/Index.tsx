@@ -64,17 +64,13 @@ const Index = () => {
   
   // Handle email submission
   const handleEmailSubmit = (email: string) => {
-    // In a real app, you'd send the email and results to your backend
-    console.log("Email submitted:", email);
-    console.log("Quiz results:", results);
-    
     // Update results with email
     setResults(prev => ({
       ...prev,
       email
     }));
     
-    toast.success("Your personalized energy map has been sent to your email!");
+    toast.success("Your personalized energy map has been generated!");
     setStage('results');
   };
   
@@ -114,7 +110,11 @@ const Index = () => {
         );
       
       case 'email':
-        return <EmailCapture onSubmit={handleEmailSubmit} onSkip={handleSkipEmail} />;
+        return <EmailCapture 
+          onSubmit={handleEmailSubmit} 
+          onSkip={handleSkipEmail} 
+          results={results}
+        />;
       
       case 'results':
         return <EnergyChart results={results} onReset={handleReset} />;

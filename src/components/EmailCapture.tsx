@@ -3,17 +3,20 @@ import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import { storeSubmission } from "@/services/githubStorage";
+import { QuizResults } from "@/utils/quizData";
 
 interface EmailCaptureProps {
   onSubmit: (email: string) => void;
   onSkip: () => void;
+  results: QuizResults;
 }
 
-const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip }) => {
+const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }) => {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !email.includes('@') || !email.includes('.')) {
@@ -23,11 +26,25 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip }) => {
     
     setIsSubmitting(true);
     
-    // Simulate a submission delay
-    setTimeout(() => {
-      onSubmit(email);
-      setIsSubmitting(false);
-    }, 1000);
+    // Store submission in GitHub
+    try {
+      const submission = {
+        email,
+        quizResults: results,
+        timestamp: new Date().toISOString()
+      };
+      
+      await storeSubmission(submission);
+      // Show success message
+      toast.success("Your personalized energy map has been saved!");
+    } catch (error) {
+      console.error("Error storing submission:", error);
+      // Continue anyway - we don't want to block the user experience
+    }
+    
+    // Continue with the quiz flow
+    onSubmit(email);
+    setIsSubmitting(false);
   };
 
   return (

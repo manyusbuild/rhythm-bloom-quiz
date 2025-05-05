@@ -11,7 +11,7 @@ interface EnergyChartProps {
 
 const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   const chartData = generateChartData(results);
-  const { points, cycleLength, peakDay, lowestDay, peakMessage, lowMessage } = chartData;
+  const { points, bezierPoints, cycleLength, peakDay, lowestDay, peakMessage, lowMessage } = chartData;
   
   // SVG dimensions and settings
   const width = 800;
@@ -20,20 +20,26 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   const innerWidth = width - (padding * 2);
   const innerHeight = height - (padding * 2);
   
-  // Scale the data points to fit the chart
+  // Scale the bezier points to fit the SVG
+  const scaledBezierPoints = bezierPoints.map(point => ({
+    x: padding + point.x * innerWidth,
+    y: padding + innerHeight - (point.y * innerHeight)
+  }));
+  
+  // Scale the data points for markers
   const scaledPoints = points.map(point => ({
     x: padding + (point.day - 1) * (innerWidth / (cycleLength - 1)),
     y: padding + innerHeight - (point.energy * innerHeight)
   }));
   
-  // Generate SVG path
-  const linePath = `M ${scaledPoints.map(p => `${p.x},${p.y}`).join(' L ')}`;
+  // Generate SVG path for bezier curve
+  const bezierPath = `M ${scaledBezierPoints.map(p => `${p.x},${p.y}`).join(' L ')}`;
   
-  // Generate area path (for the gradient fill)
+  // Generate area path for the gradient fill
   const areaPath = `
-    M ${scaledPoints[0].x},${padding + innerHeight}
-    L ${scaledPoints.map(p => `${p.x},${p.y}`).join(' ')}
-    L ${scaledPoints[scaledPoints.length - 1].x},${padding + innerHeight}
+    M ${scaledBezierPoints[0].x},${padding + innerHeight}
+    L ${scaledBezierPoints.map(p => `${p.x},${p.y}`).join(' ')}
+    L ${scaledBezierPoints[scaledBezierPoints.length - 1].x},${padding + innerHeight}
     Z
   `;
   
@@ -98,12 +104,35 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
             <path 
               d={areaPath} 
               className="energy-gradient-area" 
+              fill="url(#energyGradient)"
             />
             
             {/* Energy curve line */}
             <path 
-              d={linePath} 
+              d={bezierPath} 
               className="energy-curve" 
+              stroke="#ff7193"
+              strokeWidth="3"
+              fill="none"
+            />
+            
+            {/* Key points markers */}
+            <circle 
+              cx={peakPoint.x} 
+              cy={peakPoint.y} 
+              r="6" 
+              fill="#ff7193" 
+              stroke="#fff" 
+              strokeWidth="2"
+            />
+            
+            <circle 
+              cx={lowPoint.x} 
+              cy={lowPoint.y} 
+              r="6" 
+              fill="#9b87f5" 
+              stroke="#fff" 
+              strokeWidth="2"
             />
             
             {/* X-axis */}
@@ -207,7 +236,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               </text>
             </g>
             
-            {/* Symptions */}
+            {/* Symptoms */}
             <g transform={`translate(${width - 120}, ${padding + 10})`}>
               <text x="0" y="0" fontSize="12" fill="#8E9196">cravings</text>
               <text x="0" y="20" fontSize="12" fill="#8E9196">cranky</text>

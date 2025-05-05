@@ -15,9 +15,9 @@ const QuizProgress: React.FC<QuizProgressProps> = ({ currentStep, totalSteps }) 
         <span>Question {currentStep} of {totalSteps}</span>
         <span>{Math.round(progress)}% Complete</span>
       </div>
-      <div className="w-full h-2 bg-rhythm-softGray rounded-full">
+      <div className="w-full h-2 bg-rhythm-softGray rounded-full overflow-hidden">
         <div 
-          className="h-full bg-rhythm-accent1 rounded-full transition-all duration-500 ease-out"
+          className="h-full bg-gradient-to-r from-rhythm-accent1 to-rhythm-purple rounded-full transition-all duration-500 ease-out"
           style={{ width: `${progress}%` }}
         ></div>
       </div>

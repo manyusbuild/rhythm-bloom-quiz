@@ -6,8 +6,14 @@ interface ChartPoint {
   energy: number;
 }
 
+interface BezierPoint {
+  x: number;
+  y: number;
+}
+
 interface ChartData {
   points: ChartPoint[];
+  bezierPoints: BezierPoint[];
   cycleLength: number;
   peakDay: number;
   lowestDay: number;
@@ -71,6 +77,9 @@ export const generateChartData = (results: QuizResults): ChartData => {
     points.push({ day, energy });
   }
 
+  // Generate bezier curve points for smoother rendering
+  const bezierPoints = generateBezierPoints(points, cycleLength);
+
   // Calculate phase estimates
   const follicular = Math.floor(cycleLength * 0.5); // ~14 days for 28-day cycle
   const ovulation = Math.floor(cycleLength * 0.1);  // ~3 days for 28-day cycle
@@ -82,6 +91,7 @@ export const generateChartData = (results: QuizResults): ChartData => {
 
   return {
     points,
+    bezierPoints,
     cycleLength,
     peakDay,
     lowestDay,
@@ -93,6 +103,61 @@ export const generateChartData = (results: QuizResults): ChartData => {
       luteal
     }
   };
+};
+
+// Helper function to generate smooth bezier curve points from raw data points
+const generateBezierPoints = (points: ChartPoint[], cycleLength: number): BezierPoint[] => {
+  if (points.length < 2) return [];
+  
+  const bezierPoints: BezierPoint[] = [];
+  const tension = 0.3; // Controls the "tightness" of the curve (0 to 1)
+  const stepSize = 0.05; // Smaller step for smoother curve
+  
+  // Scale points to 0-1 range for easier bezier calculations
+  const scaledPoints = points.map(point => ({
+    x: (point.day - 1) / (cycleLength - 1),
+    y: point.energy
+  }));
+  
+  // Add extra point at the end to ensure curve connects back (for cyclical data)
+  scaledPoints.push({
+    x: 1,
+    y: scaledPoints[0].y
+  });
+  
+  // Generate bezier curve points
+  for (let i = 0; i < scaledPoints.length - 1; i++) {
+    const p0 = scaledPoints[i > 0 ? i - 1 : scaledPoints.length - 2];
+    const p1 = scaledPoints[i];
+    const p2 = scaledPoints[i + 1];
+    const p3 = scaledPoints[i + 2 < scaledPoints.length ? i + 2 : 1];
+    
+    // Calculate control points
+    const cp1x = p1.x + (p2.x - p0.x) * tension;
+    const cp1y = p1.y + (p2.y - p0.y) * tension;
+    const cp2x = p2.x - (p3.x - p1.x) * tension;
+    const cp2y = p2.y - (p3.y - p1.y) * tension;
+    
+    // Generate points along the bezier curve
+    for (let t = 0; t < 1; t += stepSize) {
+      const t2 = t * t;
+      const t3 = t2 * t;
+      const mt = 1 - t;
+      const mt2 = mt * mt;
+      const mt3 = mt2 * mt;
+      
+      // Bezier formula
+      const x = mt3 * p1.x + 3 * mt2 * t * cp1x + 3 * mt * t2 * cp2x + t3 * p2.x;
+      const y = mt3 * p1.y + 3 * mt2 * t * cp1y + 3 * mt * t2 * cp2y + t3 * p2.y;
+      
+      bezierPoints.push({
+        x,
+        y
+      });
+    }
+  }
+  
+  return bezierPoints;
 };
 
 // Helper function to calculate energy level at each day
