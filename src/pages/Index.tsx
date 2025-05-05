@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import QuizIntro from "@/components/QuizIntro";
 import QuizQuestion from "@/components/QuizQuestion";
 import EmailCapture from "@/components/EmailCapture";
-import EnergyChart from "@/components/EnergyChart";
+import ResultsScreen from "@/components/ResultsScreen";
 import { quizQuestions, defaultResults, QuizResults } from "@/utils/quizData";
 import { toast } from "sonner";
 
@@ -117,7 +117,7 @@ const Index = () => {
         />;
       
       case 'results':
-        return <EnergyChart results={results} onReset={handleReset} />;
+        return <ResultsScreen results={results} onReset={handleReset} />;
         
       default:
         return <QuizIntro onStart={handleStart} />;
