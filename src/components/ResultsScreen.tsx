@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QuizResults } from "@/utils/quizData";
 import { ArrowRight } from "lucide-react";
+import EnergyGraphPoints from "@/components/EnergyGraphPoints";
 
 interface ResultsScreenProps {
   results: QuizResults;
@@ -23,10 +24,12 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
         </p>
       </div>
       
-      {/* Graph container - placeholder for now */}
+      {/* Graph container */}
       <div className="relative bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
-        <div className="aspect-[4/3] w-full bg-gray-50 rounded flex items-center justify-center">
-          <p className="text-gray-400 text-sm">Graph placeholder - will be implemented in next phase</p>
+        <div className="aspect-[4/3] w-full bg-gray-50 rounded">
+          <div className="h-full w-full p-2">
+            <EnergyGraphPoints results={results} />
+          </div>
         </div>
         
         {/* Graph legend */}

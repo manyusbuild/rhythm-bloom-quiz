@@ -17,6 +17,7 @@ interface ChartData {
   cycleLength: number;
   peakDay: number;
   lowestDay: number;
+  periodEndDay: number; // Added for EnergyGraphPoints
   peakMessage: string;
   lowMessage: string;
   phases: {
@@ -202,6 +203,7 @@ export const generateChartData = (results: QuizResults): ChartData => {
     cycleLength,
     peakDay,
     lowestDay,
+    periodEndDay, // Added for EnergyGraphPoints
     peakMessage,
     lowMessage,
     phases: {
