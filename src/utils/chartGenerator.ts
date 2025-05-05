@@ -1,3 +1,4 @@
+
 import { QuizResults } from "./quizData";
 
 interface ChartPoint {
@@ -61,28 +62,28 @@ export const generateChartData = (results: QuizResults): ChartData => {
     lowestDay = Math.floor(cycleLength * 0.7);
   }
 
-  // Control points for the bezier curve
-  // Control point 1: end of period (typically days 3-5)
-  const controlPoint1Day = results.periodLength === "1-2days" ? 3 : 
-                           results.periodLength === "3-5days" ? 5 : 7;
-  
-  // Control point 2: around ovulation
-  const ovulationDay = Math.floor(cycleLength / 2);
-  
-  // Create key points (simplified for the bezier curve)
+  // Define the three key points as requested
+  // (day 1, energy 1), (peakDay, energy 5), (finalCycleDay, energy 1)
   const keyPoints = [
     { day: startDay, energy: 1 },       // Start point: day 1, low energy
     { day: peakDay, energy: 5 },        // Peak energy point
     { day: endDay, energy: 1 }          // End point: cycle end, low energy
   ];
 
-  // Create control points
+  // Define control points as requested
+  // Control point 1: End of period with energy 2.5
+  const periodEndDay = results.periodLength === "1-2days" ? 3 : 
+                      results.periodLength === "3-5days" ? 5 : 7;
+  
+  // Control point 2: Around ovulation with energy 4
+  const ovulationDay = Math.floor(cycleLength / 2);
+  
   const controlPoints = [
-    { day: controlPoint1Day, energy: 2.5 },    // End of period, moderate energy
-    { day: ovulationDay, energy: 4 }           // Ovulation, high-ish energy
+    { day: periodEndDay, energy: 2.5 },  // End of period, moderate energy
+    { day: ovulationDay, energy: 4 }     // Ovulation, high-ish energy
   ];
 
-  // Generate Bezier curve from the key points and control points
+  // Generate Bezier curve using the key points and control points
   const bezierPoints = generateSimplifiedBezierCurve(keyPoints, controlPoints, cycleLength);
 
   // Generate data points for the full curve (for display and markers)
@@ -199,20 +200,6 @@ const cubicBezier = (t: number, p0: BezierPoint, p1: BezierPoint, p2: BezierPoin
     x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
     y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y,
   };
-};
-
-// Helper function to calculate energy level at each day - now returns values between 1-5
-const calculateEnergyLevel = (day: number, cycleLength: number, peakDay: number, lowestDay: number): number => {
-  // Energy level between 1 and 5
-  const distanceToPeak = Math.abs(day - peakDay);
-  const distanceToLow = Math.abs(day - lowestDay);
-  
-  // If closer to peak than low point
-  if (distanceToPeak < distanceToLow) {
-    return 5 - (distanceToPeak / cycleLength) * 4;
-  } else {
-    return 1 + (distanceToLow / cycleLength) * 1.5;
-  }
 };
 
 // Generate personalized messages

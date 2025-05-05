@@ -34,12 +34,16 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
         timestamp: new Date().toISOString()
       };
       
-      await storeSubmission(submission);
-      // Show success message
-      toast.success("Your personalized energy map has been saved!");
+      const success = await storeSubmission(submission);
+      if (success) {
+        toast.success("Your personalized energy map has been saved!");
+      } else {
+        toast.error("There was an issue saving your data. We'll continue anyway.");
+        console.error("Failed to store submission");
+      }
     } catch (error) {
       console.error("Error storing submission:", error);
-      // Continue anyway - we don't want to block the user experience
+      toast.error("There was an error, but we'll continue anyway");
     }
     
     // Continue with the quiz flow

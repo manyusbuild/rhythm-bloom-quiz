@@ -17,8 +17,9 @@ export interface Submission {
 }
 
 const defaultOptions: GitHubStorageOptions = {
-  owner: 'your-github-username', // Replace with your GitHub username
-  repo: 'rhythm-bloom-submissions', // Replace with your repository name
+  owner: 'ManyusBuild', // Updated to your GitHub username
+  repo: 'rhythm-bloom-submissions', // Repository for submissions
+  token: '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' // Your GitHub token
 };
 
 export const storeSubmission = async (
