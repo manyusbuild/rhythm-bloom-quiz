@@ -24,63 +24,148 @@ interface ChartData {
     ovulation: number;
     luteal: number;
   };
+  fuzziness: {
+    xAxis: boolean;
+    periodEnd: boolean;
+    peak: boolean;
+    dip: boolean;
+    overall: boolean;
+  };
+  displayCycleLengthLabel: string;
+  conditionMessage: string | null;
 }
+
+/**
+ * Chart Configuration Mapping
+ * This object maps quiz responses to chart parameters
+ */
+const chartConfig = {
+  // Cycle length mappings
+  cycleLength: {
+    "less28days": { value: 26, display: "24–28 days", fuzzyXAxis: false },
+    "28to32days": { value: 30, display: "28–32 days", fuzzyXAxis: false },
+    "more32days": { value: 34, display: "More than 32 days", fuzzyXAxis: false },
+    "inconsistent": { value: 28, display: "~28 days*", fuzzyXAxis: true },
+    "unknown": { value: 28, display: "~28 days*", fuzzyXAxis: true }
+  },
+  
+  // Period length mappings (end day)
+  periodLength: {
+    "1-2days": { endDay: 3, fuzzy: false },
+    "3-5days": { endDay: 5, fuzzy: false },
+    "6-7days": { endDay: 7, fuzzy: false },
+    "longer": { endDay: 9, fuzzy: true }
+  },
+  
+  // Peak energy day mappings
+  peakEnergy: {
+    // For "afterPeriod", we'll add logic to calculate based on periodEndDay + 2
+    "afterPeriod": { dayOffset: 2, fuzzy: false },
+    // For "ovulation", we'll calculate as cycleLength/2
+    "ovulation": { dayOffset: 0, fuzzy: false },
+    // For "inconsistent", we'll use the same calculation as "ovulation" but add fuzziness
+    "inconsistent": { dayOffset: 0, fuzzy: true }
+  },
+  
+  // Lowest energy day mappings
+  lowestEnergy: {
+    "prePeriod": { daysFromEnd: 3, fuzzy: false },
+    "duringPeriod": { daysFromStart: 1, fuzzy: false },
+    "postOvulation": { daysFromEnd: 7, fuzzy: false },
+    "varies": { daysFromEnd: 7, fuzzy: true }
+  },
+  
+  // Hormonal conditions mappings
+  condition: {
+    "pcod": { fuzzy: true, message: "This is a generalized pattern — your body may follow a different rhythm." },
+    "pcos": { fuzzy: true, message: "This is a generalized pattern — your body may follow a different rhythm." },
+    "thyroid": { fuzzy: true, message: "This is a generalized pattern — your body may follow a different rhythm." },
+    "menopause": { fuzzy: true, message: "This is a generalized pattern — your body may follow a different rhythm." },
+    "none": { fuzzy: false, message: null }
+  },
+  
+  // Energy scale labels (replacing numerical values)
+  energyLabels: [
+    "Very Low",   // Level 1
+    "Low",        // Level 2 
+    "Moderate",   // Level 3
+    "High",       // Level 4
+    "Peak Energy" // Level 5
+  ]
+};
 
 // Generate the curve points based on quiz answers
 export const generateChartData = (results: QuizResults): ChartData => {
-  // Default to 28 days if unknown or inconsistent
-  let cycleLength = 28;
-  if (results.cycleLength === "28days") {
-    cycleLength = 28;
-  } else if (results.cycleLength === "30days") {
-    cycleLength = 30;
-  }
-
+  // Parse cycle length from config
+  const cycleLengthConfig = chartConfig.cycleLength[results.cycleLength as keyof typeof chartConfig.cycleLength] || 
+    chartConfig.cycleLength.unknown;
+  const cycleLength = cycleLengthConfig.value;
+  const displayCycleLengthLabel = cycleLengthConfig.display;
+  
+  // Parse period length from config
+  const periodLengthConfig = chartConfig.periodLength[results.periodLength as keyof typeof chartConfig.periodLength] || 
+    chartConfig.periodLength["3-5days"];
+  const periodEndDay = periodLengthConfig.endDay;
+  
+  // Determine hormonal condition effects
+  const conditionConfig = chartConfig.condition[results.condition as keyof typeof chartConfig.condition] || 
+    chartConfig.condition.none;
+  
+  // Initialize fuzziness flags
+  const fuzziness = {
+    xAxis: cycleLengthConfig.fuzzyXAxis,
+    periodEnd: periodLengthConfig.fuzzy,
+    peak: false,
+    dip: false,
+    overall: conditionConfig.fuzzy
+  };
+  
   // Determine key points for the curve
   const startDay = 1;
   const endDay = cycleLength;
 
-  // Determine peak day (high energy point)
-  let peakDay = Math.floor(cycleLength / 2); // Default peak at ovulation (mid-cycle)
+  // Determine peak day (high energy point) based on the configuration
+  let peakDay: number;
+  const peakEnergyConfig = chartConfig.peakEnergy[results.peakEnergy as keyof typeof chartConfig.peakEnergy] || 
+    chartConfig.peakEnergy.ovulation;
   
-  // Adjust based on answers
   if (results.peakEnergy === "afterPeriod") {
-    peakDay = 7; // A week after period starts
-  } else if (results.peakEnergy === "ovulation") {
+    peakDay = periodEndDay + peakEnergyConfig.dayOffset;
+  } else {
+    // For ovulation or inconsistent, use cycleLength/2
     peakDay = Math.floor(cycleLength / 2);
-  } else if (results.peakEnergy === "midMonth") {
-    peakDay = Math.floor(cycleLength * 0.6);
   }
+  
+  // Set peak fuzziness flag
+  fuzziness.peak = peakEnergyConfig.fuzzy;
 
-  // Determine low energy day
-  let lowestDay = cycleLength - 2; // Default low at end of cycle (PMS)
-  if (results.lowestEnergy === "prePeriod") {
-    lowestDay = cycleLength - 2;
-  } else if (results.lowestEnergy === "duringPeriod") {
-    lowestDay = 2;
-  } else if (results.lowestEnergy === "postOvulation") {
-    lowestDay = Math.floor(cycleLength * 0.7);
+  // Determine low energy day based on the configuration
+  let lowestDay: number;
+  const lowestEnergyConfig = chartConfig.lowestEnergy[results.lowestEnergy as keyof typeof chartConfig.lowestEnergy] || 
+    chartConfig.lowestEnergy.prePeriod;
+  
+  if ('daysFromEnd' in lowestEnergyConfig) {
+    lowestDay = cycleLength - lowestEnergyConfig.daysFromEnd;
+  } else if ('daysFromStart' in lowestEnergyConfig) {
+    lowestDay = lowestEnergyConfig.daysFromStart;
+  } else {
+    lowestDay = cycleLength - 3; // Default to 3 days before end
   }
+  
+  // Set dip fuzziness flag
+  fuzziness.dip = lowestEnergyConfig.fuzzy;
 
   // Define the three key points as requested
-  // (day 1, energy 1), (peakDay, energy 5), (finalCycleDay, energy 1)
   const keyPoints = [
-    { day: startDay, energy: 1 },       // Start point: day 1, low energy
-    { day: peakDay, energy: 5 },        // Peak energy point
-    { day: endDay, energy: 1 }          // End point: cycle end, low energy
+    { day: startDay, energy: 1 },    // Start point: day 1, low energy
+    { day: peakDay, energy: 5 },     // Peak energy point
+    { day: endDay, energy: 1 }       // End point: cycle end, low energy
   ];
 
-  // Define control points as requested
-  // Control point 1: End of period with energy 2.5
-  const periodEndDay = results.periodLength === "1-2days" ? 3 : 
-                      results.periodLength === "3-5days" ? 5 : 7;
-  
-  // Control point 2: Around ovulation with energy 4
-  const ovulationDay = Math.floor(cycleLength / 2);
-  
+  // Define control points
   const controlPoints = [
     { day: periodEndDay, energy: 2.5 },  // End of period, moderate energy
-    { day: ovulationDay, energy: 4 }     // Ovulation, high-ish energy
+    { day: Math.floor(cycleLength / 2), energy: 4 }  // Ovulation, high-ish energy
   ];
 
   // Generate Bezier curve using the key points and control points
@@ -123,7 +208,10 @@ export const generateChartData = (results: QuizResults): ChartData => {
       follicular,
       ovulation,
       luteal
-    }
+    },
+    fuzziness,
+    displayCycleLengthLabel,
+    conditionMessage: conditionConfig.message
   };
 };
 
@@ -209,8 +297,8 @@ const getPeakMessage = (peakEnergy: string): string => {
       return "I am at the top of the world!";
     case "ovulation":
       return "I feel my most confident now!";
-    case "midMonth":
-      return "My energy is flowing freely!";
+    case "inconsistent":
+      return "This is when I might shine brightest!";
     default:
       return "This is when I shine brightest!";
   }
@@ -224,6 +312,8 @@ const getLowMessage = (lowestEnergy: string): string => {
       return "I need extra care now";
     case "postOvulation":
       return "Time to slow down and rest";
+    case "varies":
+      return "My energy may dip here";
     default:
       return "My energy is conserving";
   }

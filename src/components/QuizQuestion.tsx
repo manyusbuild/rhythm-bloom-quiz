@@ -35,7 +35,8 @@ const QuizQuestion: React.FC<QuizQuestionProps> = ({
         {question.options.map((option) => (
           <div 
             key={option.id}
-            className={`option-card ${selectedAnswer === option.id ? 'selected' : ''}`}
+            className={`option-card transition-colors p-3 border rounded-lg cursor-pointer 
+              ${selectedAnswer === option.id ? 'border-rhythm-accent1 bg-pink-50' : 'border-gray-200 hover:border-gray-300'}`}
             onClick={() => onSelectAnswer(option.id, option.value)}
           >
             <div className="flex items-center">
@@ -45,7 +46,7 @@ const QuizQuestion: React.FC<QuizQuestionProps> = ({
                   <div className="w-3 h-3 rounded-full bg-rhythm-accent1"></div>
                 )}
               </div>
-              <span>{option.text}</span>
+              <span className="text-gray-800">{option.text}</span>
             </div>
           </div>
         ))}

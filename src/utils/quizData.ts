@@ -14,10 +14,11 @@ export const quizQuestions: QuizQuestion[] = [
     id: 1,
     question: "How long is your overall menstrual cycle (first day of one period to the next)?",
     options: [
-      { id: "1-1", text: "~28 days", value: "28days" },
-      { id: "1-2", text: "29–32 days", value: "30days" },
-      { id: "1-3", text: "Inconsistent", value: "inconsistent" },
-      { id: "1-4", text: "I don't know", value: "unknown" }
+      { id: "1-1", text: "Less than 28 days", value: "less28days" },
+      { id: "1-2", text: "28–32 days", value: "28to32days" },
+      { id: "1-3", text: "More than 32 days", value: "more32days" },
+      { id: "1-4", text: "Inconsistent", value: "inconsistent" },
+      { id: "1-5", text: "I don't know", value: "unknown" }
     ]
   },
   {
@@ -36,8 +37,7 @@ export const quizQuestions: QuizQuestion[] = [
     options: [
       { id: "3-1", text: "Just after my period", value: "afterPeriod" },
       { id: "3-2", text: "Around ovulation", value: "ovulation" },
-      { id: "3-3", text: "Mid-month, but not always consistent", value: "midMonth" },
-      { id: "3-4", text: "Hard to say", value: "inconsistent" }
+      { id: "3-3", text: "Hard to say", value: "inconsistent" }
     ]
   },
   {

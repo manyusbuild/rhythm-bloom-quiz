@@ -11,7 +11,18 @@ interface EnergyChartProps {
 
 const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   const chartData = generateChartData(results);
-  const { points, bezierPoints, cycleLength, peakDay, lowestDay, peakMessage, lowMessage } = chartData;
+  const { 
+    points, 
+    bezierPoints, 
+    cycleLength, 
+    peakDay, 
+    lowestDay, 
+    peakMessage, 
+    lowMessage, 
+    fuzziness,
+    displayCycleLengthLabel,
+    conditionMessage
+  } = chartData;
   
   // SVG dimensions and settings
   const width = 800;
@@ -54,6 +65,15 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   const follicularWidth = (chartData.phases.follicular / cycleLength) * innerWidth;
   const ovulationWidth = (chartData.phases.ovulation / cycleLength) * innerWidth;
   const lutealWidth = (chartData.phases.luteal / cycleLength) * innerWidth;
+
+  // Energy scale labels (descriptive text instead of numbers)
+  const energyLabels = [
+    "Peak Energy", 
+    "High", 
+    "Moderate", 
+    "Low", 
+    "Very Low"
+  ];
   
   return (
     <div className="animate-fade-in">
@@ -64,6 +84,11 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
         <p className="text-rhythm-text">
           Based on your responses, here's how your energy levels may flow throughout your cycle
         </p>
+        {conditionMessage && (
+          <p className="text-sm text-amber-600 italic mt-2">
+            {conditionMessage}
+          </p>
+        )}
       </div>
       
       <div className="overflow-x-auto mb-8">
@@ -75,6 +100,11 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
                 <stop offset="0%" stopColor="#9b87f5" stopOpacity="0.7" />
                 <stop offset="100%" stopColor="#FFDEE2" stopOpacity="0.5" />
               </linearGradient>
+              
+              {/* Pattern for fuzzy lines if needed */}
+              <pattern id="fuzzyPattern" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                <line x1="0" y1="0" x2="0" y2="6" stroke="#ff7193" strokeWidth="4" strokeOpacity="0.3" />
+              </pattern>
             </defs>
             
             {/* Chart grid */}
@@ -118,6 +148,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               stroke="#ff7193"
               strokeWidth="3"
               fill="none"
+              strokeDasharray={fuzziness.overall ? "5,2" : "none"}
             />
             
             {/* Key points markers */}
@@ -125,7 +156,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               cx={peakPoint.x} 
               cy={peakPoint.y} 
               r="6" 
-              fill="#ff7193" 
+              fill={fuzziness.peak ? "url(#fuzzyPattern)" : "#ff7193"}
               stroke="#fff" 
               strokeWidth="2"
             />
@@ -134,7 +165,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               cx={lowPoint.x} 
               cy={lowPoint.y} 
               r="6" 
-              fill="#9b87f5" 
+              fill={fuzziness.dip ? "url(#fuzzyPattern)" : "#9b87f5"}
               stroke="#fff" 
               strokeWidth="2"
             />
@@ -159,7 +190,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               strokeWidth="2" 
             />
             
-            {/* Axis labels - updated to 1-5 scale */}
+            {/* Axis labels - updated to use descriptive labels */}
             <text x={padding} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
               Day 1 of Period
             </text>
@@ -173,35 +204,53 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               21 Days
             </text>
             <text x={padding + innerWidth} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
-              {cycleLength} Days
+              {displayCycleLengthLabel}
+              {fuzziness.xAxis && <tspan fontStyle="italic">*</tspan>}
             </text>
             
-            {/* Y-axis labels - updated to 1-5 scale */}
-            <text x={20} y={padding} fontSize="12" fill="#8E9196" dominantBaseline="middle">
-              Energy 5
-            </text>
-            <text x={20} y={padding + innerHeight*0.25} fontSize="12" fill="#8E9196" dominantBaseline="middle">
-              Energy 4
-            </text>
-            <text x={20} y={padding + innerHeight*0.5} fontSize="12" fill="#8E9196" dominantBaseline="middle">
-              Energy 3
-            </text>
-            <text x={20} y={padding + innerHeight*0.75} fontSize="12" fill="#8E9196" dominantBaseline="middle">
-              Energy 2
-            </text>
-            <text x={20} y={height - padding} fontSize="12" fill="#8E9196" dominantBaseline="middle">
-              Energy 1
-            </text>
+            {/* Y-axis labels - updated to descriptive labels */}
+            {energyLabels.map((label, i) => (
+              <text 
+                key={`y-label-${i}`} 
+                x={20} 
+                y={padding + (innerHeight / 4) * i} 
+                fontSize="12" 
+                fill="#8E9196" 
+                dominantBaseline="middle"
+              >
+                {label}
+              </text>
+            ))}
+            
             <text x={25} y={padding - 20} fontSize="14" fill="#8E9196" fontWeight="bold" dominantBaseline="middle">
-              Energy meter
+              Energy Level
             </text>
             
             {/* Peak and low energy notes */}
-            <text x={peakPoint.x} y={peakPoint.y - 20} fontSize="12" textAnchor="middle" fill="#333" fontStyle="italic">
+            <text 
+              x={peakPoint.x} 
+              y={peakPoint.y - 20} 
+              fontSize="12" 
+              textAnchor="middle" 
+              fill="#333" 
+              fontStyle="italic"
+              opacity={fuzziness.peak ? 0.8 : 1}
+            >
               {peakMessage}
+              {fuzziness.peak && " (maybe)"}
             </text>
-            <text x={lowPoint.x} y={lowPoint.y + 20} fontSize="12" textAnchor="middle" fill="#333" fontStyle="italic">
+            
+            <text 
+              x={lowPoint.x} 
+              y={lowPoint.y + 20} 
+              fontSize="12" 
+              textAnchor="middle" 
+              fill="#333" 
+              fontStyle="italic"
+              opacity={fuzziness.dip ? 0.8 : 1}
+            >
               {lowMessage}
+              {fuzziness.dip && " (may vary)"}
             </text>
             
             {/* Cycle phases */}
@@ -255,6 +304,13 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               <text x="0" y="20" fontSize="12" fill="#8E9196">cranky</text>
               <text x="0" y="40" fontSize="12" fill="#8E9196">mood swings</text>
             </g>
+            
+            {/* Fuzzy indicator explanation if needed */}
+            {(fuzziness.xAxis || fuzziness.overall) && (
+              <text x={padding} y={height + 90} fontSize="10" fill="#666" fontStyle="italic">
+                *Cycle patterns may vary
+              </text>
+            )}
           </svg>
         </div>
       </div>
