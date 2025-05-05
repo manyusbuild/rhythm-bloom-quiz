@@ -24,10 +24,10 @@ const QuizQuestion: React.FC<QuizQuestionProps> = ({
   onPrevious
 }) => {
   return (
-    <div className="animate-fade-in">
+    <div className="animate-fade-in w-full max-w-full">
       <QuizProgress currentStep={currentStep} totalSteps={totalSteps} />
       
-      <h2 className="text-2xl font-medium text-gray-800 mb-6">
+      <h2 className="text-xl md:text-2xl font-medium text-gray-800 mb-6">
         {question.question}
       </h2>
       
@@ -57,7 +57,7 @@ const QuizQuestion: React.FC<QuizQuestionProps> = ({
           variant="outline"
           onClick={onPrevious}
           disabled={currentStep === 1}
-          className="px-6"
+          className="px-4 md:px-6"
         >
           Back
         </Button>
@@ -65,7 +65,7 @@ const QuizQuestion: React.FC<QuizQuestionProps> = ({
         <Button
           onClick={onNext}
           disabled={!selectedAnswer}
-          className="bg-rhythm-accent1 hover:bg-rhythm-accent2 text-white px-8"
+          className="bg-rhythm-accent1 hover:bg-rhythm-accent2 text-white px-6 md:px-8"
         >
           {currentStep === totalSteps ? "See Results" : "Continue"}
         </Button>
@@ -75,3 +75,4 @@ const QuizQuestion: React.FC<QuizQuestionProps> = ({
 };
 
 export default QuizQuestion;
+

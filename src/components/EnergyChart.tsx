@@ -1,8 +1,10 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { QuizResults } from "@/utils/quizData";
 import { generateChartData } from "@/utils/chartGenerator";
 import { Button } from "@/components/ui/button";
+import { Toggle } from "@/components/ui/toggle";
+import { SquareCode } from "lucide-react";
 
 interface EnergyChartProps {
   results: QuizResults;
@@ -10,6 +12,7 @@ interface EnergyChartProps {
 }
 
 const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
+  const [devMode, setDevMode] = useState(false);
   const chartData = generateChartData(results);
   const { 
     points, 
@@ -24,10 +27,10 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
     conditionMessage
   } = chartData;
   
-  // SVG dimensions and settings
-  const width = 800;
+  // SVG dimensions and settings - increased width for better visibility
+  const width = 900;
   const height = 400;
-  const padding = 40;
+  const padding = 60;
   const innerWidth = width - (padding * 2);
   const innerHeight = height - (padding * 2);
   
@@ -40,7 +43,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   // Scale the data points for markers
   const scaledPoints = points.map(point => ({
     x: padding + (point.day - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - ((point.energy - 1) / 4) * innerHeight // Scale 1-5 to fill height
+    y: padding + innerHeight - ((point.energy - 1) / 4) * innerHeight
   }));
   
   // Generate SVG path for bezier curve
@@ -54,19 +57,14 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
     Z
   `;
   
-  // Calculate label positions
+  // Calculate key points for developer mode
   const peakPointIndex = points.findIndex(p => p.day === peakDay);
   const peakPoint = scaledPoints[peakPointIndex] || scaledPoints[Math.floor(scaledPoints.length / 2)];
   
   const lowPointIndex = points.findIndex(p => p.day === lowestDay);
   const lowPoint = scaledPoints[lowPointIndex] || scaledPoints[scaledPoints.length - 2];
   
-  // Dynamically calculate the phase positions
-  const follicularWidth = (chartData.phases.follicular / cycleLength) * innerWidth;
-  const ovulationWidth = (chartData.phases.ovulation / cycleLength) * innerWidth;
-  const lutealWidth = (chartData.phases.luteal / cycleLength) * innerWidth;
-
-  // Energy scale labels (descriptive text instead of numbers)
+  // Energy scale labels (descriptive text)
   const energyLabels = [
     "Peak Energy", 
     "High", 
@@ -74,6 +72,13 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
     "Low", 
     "Very Low"
   ];
+  
+  // Calculate grid lines (every 7 days)
+  const dayGridLines = [];
+  for (let day = 7; day < cycleLength; day += 7) {
+    const x = padding + (day - 1) * (innerWidth / (cycleLength - 1));
+    dayGridLines.push(x);
+  }
   
   return (
     <div className="animate-fade-in">
@@ -91,9 +96,26 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
         )}
       </div>
       
-      <div className="overflow-x-auto mb-8">
-        <div className="min-w-[800px]">
-          <svg width={width} height={height + 120} viewBox={`0 0 ${width} ${height + 120}`} className="mx-auto">
+      <div className="relative flex justify-end mb-2">
+        <Toggle 
+          pressed={devMode} 
+          onPressedChange={setDevMode}
+          className="text-xs bg-gray-100 hover:bg-gray-200"
+          size="sm"
+        >
+          <SquareCode className="h-4 w-4 mr-1" /> Dev Mode
+        </Toggle>
+      </div>
+      
+      <div className="w-full overflow-x-auto mb-8">
+        <div className="min-w-[900px] lg:w-full">
+          <svg 
+            width="100%" 
+            height={height + 80} 
+            viewBox={`0 0 ${width} ${height + 80}`} 
+            preserveAspectRatio="xMidYMid meet"
+            className="mx-auto"
+          >
             {/* Define gradient for energy curve fill */}
             <defs>
               <linearGradient id="energyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
@@ -107,7 +129,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               </pattern>
             </defs>
             
-            {/* Chart grid */}
+            {/* Chart grid - horizontal lines for each energy level */}
             {Array.from({ length: 5 }).map((_, i) => (
               <line 
                 key={`h-line-${i}`}
@@ -121,12 +143,13 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               />
             ))}
             
-            {Array.from({ length: 5 }).map((_, i) => (
+            {/* Vertical grid lines every 7 days */}
+            {dayGridLines.map((x, i) => (
               <line 
                 key={`v-line-${i}`}
-                x1={padding + (innerWidth / 4) * i} 
+                x1={x} 
                 y1={padding} 
-                x2={padding + (innerWidth / 4) * i} 
+                x2={x} 
                 y2={height - padding}
                 className="energy-chart-grid" 
                 stroke="#E5E7EB"
@@ -151,24 +174,102 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               strokeDasharray={fuzziness.overall ? "5,2" : "none"}
             />
             
-            {/* Key points markers */}
-            <circle 
-              cx={peakPoint.x} 
-              cy={peakPoint.y} 
-              r="6" 
-              fill={fuzziness.peak ? "url(#fuzzyPattern)" : "#ff7193"}
-              stroke="#fff" 
-              strokeWidth="2"
-            />
-            
-            <circle 
-              cx={lowPoint.x} 
-              cy={lowPoint.y} 
-              r="6" 
-              fill={fuzziness.dip ? "url(#fuzzyPattern)" : "#9b87f5"}
-              stroke="#fff" 
-              strokeWidth="2"
-            />
+            {/* Developer mode elements */}
+            {devMode && (
+              <g className="developer-markers">
+                {/* Start point marker */}
+                <circle 
+                  cx={scaledBezierPoints[0].x} 
+                  cy={scaledBezierPoints[0].y} 
+                  r="5" 
+                  fill="#333"
+                  stroke="#fff" 
+                  strokeWidth="1"
+                />
+                <text 
+                  x={scaledBezierPoints[0].x} 
+                  y={scaledBezierPoints[0].y - 10} 
+                  fontSize="10" 
+                  fill="#333" 
+                  textAnchor="middle"
+                >
+                  Start: Day 1
+                </text>
+                
+                {/* Peak point marker */}
+                <circle 
+                  cx={peakPoint.x} 
+                  cy={peakPoint.y} 
+                  r="5" 
+                  fill="#ff7193"
+                  stroke="#fff" 
+                  strokeWidth="1"
+                />
+                <text 
+                  x={peakPoint.x} 
+                  y={peakPoint.y - 10} 
+                  fontSize="10" 
+                  fill="#333" 
+                  textAnchor="middle"
+                >
+                  Peak: Day {peakDay}
+                </text>
+                
+                {/* Low point marker */}
+                <circle 
+                  cx={lowPoint.x} 
+                  cy={lowPoint.y} 
+                  r="5" 
+                  fill="#9b87f5"
+                  stroke="#fff" 
+                  strokeWidth="1"
+                />
+                <text 
+                  x={lowPoint.x} 
+                  y={lowPoint.y + 15} 
+                  fontSize="10" 
+                  fill="#333" 
+                  textAnchor="middle"
+                >
+                  Low: Day {lowestDay}
+                </text>
+                
+                {/* End point marker */}
+                <circle 
+                  cx={scaledBezierPoints[scaledBezierPoints.length - 1].x} 
+                  cy={scaledBezierPoints[scaledBezierPoints.length - 1].y} 
+                  r="5" 
+                  fill="#333"
+                  stroke="#fff" 
+                  strokeWidth="1"
+                />
+                <text 
+                  x={scaledBezierPoints[scaledBezierPoints.length - 1].x} 
+                  y={scaledBezierPoints[scaledBezierPoints.length - 1].y - 10} 
+                  fontSize="10" 
+                  fill="#333" 
+                  textAnchor="middle"
+                >
+                  End: Day {cycleLength}
+                </text>
+                
+                {/* Control points markers (for Bezier curve visualization) */}
+                {bezierPoints.map((point, i) => (
+                  i % 10 === 0 && i > 0 && i < bezierPoints.length - 1 && (
+                    <circle 
+                      key={`ctrl-${i}`}
+                      cx={point.x} 
+                      cy={point.y} 
+                      r="3" 
+                      fill="none"
+                      stroke="#666" 
+                      strokeWidth="1"
+                      strokeDasharray="2,2"
+                    />
+                  )
+                ))}
+              </g>
+            )}
             
             {/* X-axis */}
             <line 
@@ -190,124 +291,49 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               strokeWidth="2" 
             />
             
-            {/* Axis labels - updated to use descriptive labels */}
+            {/* X-axis labels */}
             <text x={padding} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
-              Day 1 of Period
+              Day 1
             </text>
-            <text x={padding + innerWidth * 0.25} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
-              7 Days
-            </text>
-            <text x={padding + innerWidth * 0.5} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
-              14 Days
-            </text>
-            <text x={padding + innerWidth * 0.75} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
-              21 Days
-            </text>
+            {dayGridLines.map((x, i) => (
+              <text 
+                key={`x-label-${i}`}
+                x={x} 
+                y={height - 10} 
+                fontSize="12" 
+                textAnchor="middle" 
+                fill="#8E9196"
+              >
+                Day {(i + 1) * 7}
+              </text>
+            ))}
             <text x={padding + innerWidth} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
               {displayCycleLengthLabel}
               {fuzziness.xAxis && <tspan fontStyle="italic">*</tspan>}
             </text>
             
-            {/* Y-axis labels - updated to descriptive labels */}
+            {/* Y-axis labels */}
             {energyLabels.map((label, i) => (
               <text 
                 key={`y-label-${i}`} 
-                x={20} 
+                x={padding - 10} 
                 y={padding + (innerHeight / 4) * i} 
                 fontSize="12" 
                 fill="#8E9196" 
+                textAnchor="end"
                 dominantBaseline="middle"
               >
                 {label}
               </text>
             ))}
             
-            <text x={25} y={padding - 20} fontSize="14" fill="#8E9196" fontWeight="bold" dominantBaseline="middle">
+            <text x={padding - 40} y={padding - 20} fontSize="14" fill="#8E9196" fontWeight="bold" dominantBaseline="middle">
               Energy Level
             </text>
             
-            {/* Peak and low energy notes */}
-            <text 
-              x={peakPoint.x} 
-              y={peakPoint.y - 20} 
-              fontSize="12" 
-              textAnchor="middle" 
-              fill="#333" 
-              fontStyle="italic"
-              opacity={fuzziness.peak ? 0.8 : 1}
-            >
-              {peakMessage}
-              {fuzziness.peak && " (maybe)"}
-            </text>
-            
-            <text 
-              x={lowPoint.x} 
-              y={lowPoint.y + 20} 
-              fontSize="12" 
-              textAnchor="middle" 
-              fill="#333" 
-              fontStyle="italic"
-              opacity={fuzziness.dip ? 0.8 : 1}
-            >
-              {lowMessage}
-              {fuzziness.dip && " (may vary)"}
-            </text>
-            
-            {/* Cycle phases */}
-            <g transform={`translate(0, ${height + 20})`}>
-              {/* Menstrual Cycle label */}
-              <rect x={padding} y="0" width={innerWidth} height="20" fill="#f87171" />
-              <text x={padding + innerWidth/2} y="13" fontSize="12" textAnchor="middle" fill="white">
-                menstrual cycle
-              </text>
-              
-              {/* Follicular Phase */}
-              <rect x={padding} y="24" width={follicularWidth} height="20" fill="#fbbf24" />
-              <text x={padding + follicularWidth/2} y="37" fontSize="12" textAnchor="middle" fill="white">
-                follicular phase
-              </text>
-              
-              {/* Ovulation Phase */}
-              <rect x={padding + follicularWidth} y="24" width={ovulationWidth} height="20" fill="#34d399" />
-              <text 
-                x={padding + follicularWidth + ovulationWidth/2} 
-                y="37" 
-                fontSize="12" 
-                textAnchor="middle" 
-                fill="white"
-              >
-                ovulation phase
-              </text>
-              
-              {/* Luteal Phase */}
-              <rect 
-                x={padding + follicularWidth + ovulationWidth} 
-                y="24" 
-                width={lutealWidth} 
-                height="20" 
-                fill="#60a5fa" 
-              />
-              <text 
-                x={padding + follicularWidth + ovulationWidth + lutealWidth/2} 
-                y="37" 
-                fontSize="12" 
-                textAnchor="middle" 
-                fill="white"
-              >
-                luteal phase
-              </text>
-            </g>
-            
-            {/* Symptoms */}
-            <g transform={`translate(${width - 120}, ${padding + 10})`}>
-              <text x="0" y="0" fontSize="12" fill="#8E9196">cravings</text>
-              <text x="0" y="20" fontSize="12" fill="#8E9196">cranky</text>
-              <text x="0" y="40" fontSize="12" fill="#8E9196">mood swings</text>
-            </g>
-            
             {/* Fuzzy indicator explanation if needed */}
             {(fuzziness.xAxis || fuzziness.overall) && (
-              <text x={padding} y={height + 90} fontSize="10" fill="#666" fontStyle="italic">
+              <text x={padding} y={height + 30} fontSize="10" fill="#666" fontStyle="italic">
                 *Cycle patterns may vary
               </text>
             )}
@@ -332,3 +358,4 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
 };
 
 export default EnergyChart;
+
