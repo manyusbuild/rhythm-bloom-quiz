@@ -5,7 +5,7 @@ import { generateChartData } from "@/utils/chartGenerator";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { SquareCode } from "lucide-react";
-import { useMediaQuery } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EnergyChartProps {
   results: QuizResults;
@@ -23,7 +23,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
     source?: string;
   }>(null);
   
-  const isMobile = useMediaQuery("(max-width: 768px)");
+  const isMobile = useIsMobile();
   const chartData = generateChartData(results);
   
   const { 
@@ -35,6 +35,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
     fuzziness,
     displayCycleLengthLabel,
     conditionMessage,
+    periodEndDay,
     controlPoints
   } = chartData;
   
@@ -46,46 +47,36 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   }, [isMobile]);
   
   // SVG dimensions and settings with improved responsiveness
-  const padding = isMobile ? 30 : 60;
-  const width = isMobile ? 350 : 900;
-  const height = isMobile ? 300 : 400;
+  const padding = isMobile ? 20 : 60; // Reduced padding on mobile
+  const width = isMobile ? 320 : 900;  // Adjusted for mobile
+  const height = isMobile ? 260 : 400; // Adjusted for mobile
   const innerWidth = width - (padding * 2);
   const innerHeight = height - (padding * 2);
-  
-  // Calculate energy curve points with revised Bezier logic
-  // Always ensure start and end points are at energy level 1 (never 0)
-  const startPoint = { day: 1, energy: 1 };
-  const peakPoint = { day: peakDay, energy: 5 }; // Always peak at energy level 5
-  const endPoint = { day: cycleLength, energy: 1 };
-  
-  // Control points with improved positioning for smoother curves
-  const controlPoint1 = controlPoints[0];
-  const controlPoint2 = controlPoints[1];
   
   // Scale the points to fit the SVG
   const scaledStartPoint = {
     x: padding,
-    y: padding + innerHeight - ((startPoint.energy - 1) / 4) * innerHeight
+    y: padding + innerHeight - ((1 - 1) / 4) * innerHeight // Always at energy level 1
   };
   
   const scaledPeakPoint = {
-    x: padding + (peakPoint.day - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - ((peakPoint.energy - 1) / 4) * innerHeight
+    x: padding + (peakDay - 1) * (innerWidth / (cycleLength - 1)),
+    y: padding + innerHeight - ((5 - 1) / 4) * innerHeight // Always at energy level 5
   };
   
   const scaledEndPoint = {
     x: padding + innerWidth,
-    y: padding + innerHeight - ((endPoint.energy - 1) / 4) * innerHeight
+    y: padding + innerHeight - ((1 - 1) / 4) * innerHeight // Always at energy level 1
   };
   
   const scaledControlPoint1 = {
-    x: padding + (controlPoint1.day - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - ((controlPoint1.energy - 1) / 4) * innerHeight
+    x: padding + (controlPoints[0].day - 1) * (innerWidth / (cycleLength - 1)),
+    y: padding + innerHeight - ((controlPoints[0].energy - 1) / 4) * innerHeight
   };
   
   const scaledControlPoint2 = {
-    x: padding + (controlPoint2.day - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - ((controlPoint2.energy - 1) / 4) * innerHeight
+    x: padding + (controlPoints[1].day - 1) * (innerWidth / (cycleLength - 1)),
+    y: padding + innerHeight - ((controlPoints[1].energy - 1) / 4) * innerHeight
   };
   
   // Scale the bezier points for visualization
@@ -169,19 +160,21 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
             {/* Define enhanced gradients for energy curve fill */}
             <defs>
               <linearGradient id="energyGradientTop" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#A7F3D0" stopOpacity="0.8" /> {/* Soft green for high energy */}
-                <stop offset="100%" stopColor="#D1FAE5" stopOpacity="0.2" />
+                <stop offset="0%" stopColor="#A7F3D0" stopOpacity="0.9" /> {/* Soft green for high energy */}
+                <stop offset="50%" stopColor="#D1FAE5" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#D1FAE5" stopOpacity="0.1" />
               </linearGradient>
               
               <linearGradient id="energyGradientBottom" x1="0%" y1="100%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#FECDD3" stopOpacity="0.8" /> {/* Soft pink for low energy */}
-                <stop offset="100%" stopColor="#FEE2E2" stopOpacity="0.2" />
+                <stop offset="0%" stopColor="#FECDD3" stopOpacity="0.9" /> {/* Soft pink for low energy */}
+                <stop offset="50%" stopColor="#FEE2E2" stopOpacity="0.5" />
+                <stop offset="100%" stopColor="#FEE2E2" stopOpacity="0.1" />
               </linearGradient>
               
               <linearGradient id="energyGradientCombined" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#A7F3D0" stopOpacity="0.7" />
-                <stop offset="50%" stopColor="#FEF3C7" stopOpacity="0.5" /> {/* Blended midpoint */}
-                <stop offset="100%" stopColor="#FECDD3" stopOpacity="0.7" />
+                <stop offset="0%" stopColor="#A7F3D0" stopOpacity="0.8" />
+                <stop offset="50%" stopColor="#FEF3C7" stopOpacity="0.4" /> {/* Blended midpoint */}
+                <stop offset="100%" stopColor="#FECDD3" stopOpacity="0.8" />
               </linearGradient>
               
               {/* Pattern for fuzzy lines if needed */}
@@ -201,7 +194,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
                 className="energy-chart-grid" 
                 stroke="#E5E7EB"
                 strokeWidth="1"
-                strokeOpacity="0.3"
+                strokeOpacity="0.2"
               />
             ))}
             
@@ -216,11 +209,11 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
                 className="energy-chart-grid" 
                 stroke="#E5E7EB"
                 strokeWidth="1"
-                strokeOpacity="0.3"
+                strokeOpacity="0.2"
               />
             ))}
             
-            {/* Energy curve area fill */}
+            {/* Energy curve area fill with bi-directional gradient */}
             <path 
               d={areaPath} 
               className="energy-gradient-area" 
@@ -336,10 +329,10 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
                   onMouseEnter={() => handlePointHover({
                     x: scaledControlPoint1.x, 
                     y: scaledControlPoint1.y, 
-                    day: controlPoint1.day, 
-                    energy: controlPoint1.energy,
+                    day: controlPoints[0].day, 
+                    energy: controlPoints[0].energy,
                     type: 'Control Point 1',
-                    source: `Between period end (day ${chartData.periodEndDay}) and peak (day ${peakDay})`
+                    source: `Between period end (day ${periodEndDay}) and peak (day ${peakDay})`
                   })}
                   onMouseLeave={handlePointLeave}
                 />
@@ -365,8 +358,8 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
                   onMouseEnter={() => handlePointHover({
                     x: scaledControlPoint2.x, 
                     y: scaledControlPoint2.y, 
-                    day: controlPoint2.day, 
-                    energy: controlPoint2.energy,
+                    day: controlPoints[1].day, 
+                    energy: controlPoints[1].energy,
                     type: 'Control Point 2',
                     source: `Between peak (day ${peakDay}) and cycle end (day ${cycleLength})`
                   })}

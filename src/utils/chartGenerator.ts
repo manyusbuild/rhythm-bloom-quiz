@@ -162,20 +162,31 @@ export const generateChartData = (results: QuizResults): ChartData => {
 
   // Always ensure start and end points are at energy level 1, and peak is at energy level 5
   const keyPoints = [
-    { day: startDay, energy: 1 },    // Start point: day 1, low energy
+    { day: startDay, energy: 1 },    // Start point: day 1, low energy (level 1, never 0)
     { day: peakDay, energy: 5 },     // Peak energy point: always at level 5
-    { day: endDay, energy: 1 }       // End point: cycle end, low energy
+    { day: endDay, energy: 1 }       // End point: cycle end, low energy (level 1, never 0)
   ];
 
-  // Improved control points for smoother curves
-  // Control point 1: Between period end and peak, but closer to start for gentler slope
-  const controlPoint1Day = Math.floor((periodEndDay + peakDay) / 2);
-  const controlPoint1Energy = 3; // Mid-level energy for smoother rise
+  // Improved control points for smoother curves with horizontal tangents at start and end
   
-  // Control point 2: Between peak and end, influenced by lowest energy day
-  const controlPoint2Day = Math.floor((peakDay + endDay) / 2);
-  // If lowest day is closer to end, lower the control point energy for a deeper dip
-  const controlPoint2Energy = lowestDay > controlPoint2Day ? 2 : 3;
+  // Control point 1: Between period end and peak
+  // Position further from the start point for a more horizontal tangent
+  const controlPoint1Day = Math.max(
+    Math.floor(periodEndDay + (peakDay - periodEndDay) * 0.4), 
+    startDay + Math.floor(cycleLength * 0.15)
+  );
+  // Energy level adjusted for smoother transition
+  const controlPoint1Energy = 3; 
+  
+  // Control point 2: Between peak and end
+  // Position further from the end point for a more horizontal tangent
+  const isLowEnergyNearEnd = lowestDay > peakDay && lowestDay > cycleLength * 0.6;
+  const controlPoint2Day = isLowEnergyNearEnd 
+    ? Math.floor(peakDay + (endDay - peakDay) * 0.7)
+    : Math.floor(peakDay + (endDay - peakDay) * 0.6);
+  
+  // Lower energy if lowest day is closer to end
+  const controlPoint2Energy = isLowEnergyNearEnd ? 2 : 3;
   
   const controlPoints = [
     { day: controlPoint1Day, energy: controlPoint1Energy },
@@ -197,7 +208,8 @@ export const generateChartData = (results: QuizResults): ChartData => {
     
     points.push({ 
       day, 
-      energy: closest.y * 5 // Scale to 1-5 range
+      // Ensure energy is at least 1 (never 0)
+      energy: Math.max(1, Math.round(closest.y * 5)) 
     });
   }
 
@@ -232,6 +244,7 @@ export const generateChartData = (results: QuizResults): ChartData => {
 };
 
 // Generate an enhanced bezier curve with improved control points for smoother transitions
+// and horizontal tangents at start and end points
 const generateEnhancedBezierCurve = (
   keyPoints: ChartPoint[], 
   controlPoints: ChartPoint[], 
@@ -255,33 +268,38 @@ const generateEnhancedBezierCurve = (
   // 1. From start to peak: P0(start), C1(controlPoint1), C2(calculated), P3(peak)
   // 2. From peak to end: P0(peak), C1(calculated), C2(controlPoint2), P3(end)
   
-  // First segment: Start to Peak
+  // First segment: Start to Peak with horizontal tangent at start
   for (let t = 0; t <= 1; t += 1/numPoints) {
     const p0 = scaledKeyPoints[0]; // Start point
     const p3 = scaledKeyPoints[1]; // Peak point
-    const c1 = scaledControlPoints[0]; // First control point
     
-    // Calculate the second control point to ensure smooth transition at the peak
-    const c2 = {
-      x: p3.x - (p3.x - c1.x) * 0.5,
-      y: p3.y - 0.05 // Slight adjustment to ensure horizontal tangent at peak
+    // Adjust control points for a horizontal tangent at the start
+    // First control point moved horizontally from the start point
+    const c1 = {
+      x: p0.x + (scaledControlPoints[0].x - p0.x) * 0.3, // Closer to start for horizontal tangent
+      y: p0.y // Same y as start for horizontal tangent
     };
+    
+    // Second control point positioned to ensure smooth transition to peak
+    const c2 = scaledControlPoints[0];
     
     // Calculate point on cubic bezier curve
     const point = cubicBezier(t, p0, c1, c2, p3);
     bezierPoints.push(point);
   }
   
-  // Second segment: Peak to End
+  // Second segment: Peak to End with horizontal tangent at end
   for (let t = 0; t <= 1; t += 1/numPoints) {
     const p0 = scaledKeyPoints[1]; // Peak point
     const p3 = scaledKeyPoints[2]; // End point
-    const c2 = scaledControlPoints[1]; // Second control point
     
-    // Calculate the first control point to ensure smooth transition at the peak
-    const c1 = {
-      x: p0.x + (c2.x - p0.x) * 0.5,
-      y: p0.y - 0.05 // Slight adjustment to ensure horizontal tangent at peak
+    // First control point positioned to ensure smooth transition from peak
+    const c1 = scaledControlPoints[1];
+    
+    // Last control point moved horizontally from the end point
+    const c2 = {
+      x: p3.x - (p3.x - scaledControlPoints[1].x) * 0.3, // Closer to end for horizontal tangent
+      y: p3.y // Same y as end for horizontal tangent
     };
     
     // Calculate point on cubic bezier curve
