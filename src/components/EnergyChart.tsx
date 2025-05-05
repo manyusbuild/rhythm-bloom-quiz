@@ -29,7 +29,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   // Scale the data points for markers
   const scaledPoints = points.map(point => ({
     x: padding + (point.day - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - (point.energy * innerHeight)
+    y: padding + innerHeight - ((point.energy - 1) / 4) * innerHeight // Scale 1-5 to fill height
   }));
   
   // Generate SVG path for bezier curve
@@ -86,6 +86,8 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
                 x2={width - padding} 
                 y2={padding + (innerHeight / 4) * i}
                 className="energy-chart-grid" 
+                stroke="#E5E7EB"
+                strokeWidth="1"
               />
             ))}
             
@@ -97,6 +99,8 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
                 x2={padding + (innerWidth / 4) * i} 
                 y2={height - padding}
                 className="energy-chart-grid" 
+                stroke="#E5E7EB"
+                strokeWidth="1"
               />
             ))}
             
@@ -155,7 +159,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               strokeWidth="2" 
             />
             
-            {/* Axis labels */}
+            {/* Axis labels - updated to 1-5 scale */}
             <text x={padding} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
               Day 1 of Period
             </text>
@@ -172,12 +176,21 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               {cycleLength} Days
             </text>
             
-            {/* Y-axis labels */}
+            {/* Y-axis labels - updated to 1-5 scale */}
             <text x={20} y={padding} fontSize="12" fill="#8E9196" dominantBaseline="middle">
-              super high
+              Energy 5
+            </text>
+            <text x={20} y={padding + innerHeight*0.25} fontSize="12" fill="#8E9196" dominantBaseline="middle">
+              Energy 4
+            </text>
+            <text x={20} y={padding + innerHeight*0.5} fontSize="12" fill="#8E9196" dominantBaseline="middle">
+              Energy 3
+            </text>
+            <text x={20} y={padding + innerHeight*0.75} fontSize="12" fill="#8E9196" dominantBaseline="middle">
+              Energy 2
             </text>
             <text x={20} y={height - padding} fontSize="12" fill="#8E9196" dominantBaseline="middle">
-              very low
+              Energy 1
             </text>
             <text x={25} y={padding - 20} fontSize="14" fill="#8E9196" fontWeight="bold" dominantBaseline="middle">
               Energy meter

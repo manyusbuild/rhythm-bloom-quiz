@@ -1,4 +1,3 @@
-
 import { QuizResults } from "./quizData";
 
 interface ChartPoint {
@@ -36,10 +35,13 @@ export const generateChartData = (results: QuizResults): ChartData => {
     cycleLength = 30;
   }
 
-  // Determine peak and low days based on answers
-  let peakDay = Math.floor(cycleLength / 2); // Default peak at ovulation (mid-cycle)
-  let lowestDay = cycleLength - 2; // Default low at end of cycle (PMS)
+  // Determine key points for the curve
+  const startDay = 1;
+  const endDay = cycleLength;
 
+  // Determine peak day (high energy point)
+  let peakDay = Math.floor(cycleLength / 2); // Default peak at ovulation (mid-cycle)
+  
   // Adjust based on answers
   if (results.peakEnergy === "afterPeriod") {
     peakDay = 7; // A week after period starts
@@ -49,6 +51,8 @@ export const generateChartData = (results: QuizResults): ChartData => {
     peakDay = Math.floor(cycleLength * 0.6);
   }
 
+  // Determine low energy day
+  let lowestDay = cycleLength - 2; // Default low at end of cycle (PMS)
   if (results.lowestEnergy === "prePeriod") {
     lowestDay = cycleLength - 2;
   } else if (results.lowestEnergy === "duringPeriod") {
@@ -57,28 +61,45 @@ export const generateChartData = (results: QuizResults): ChartData => {
     lowestDay = Math.floor(cycleLength * 0.7);
   }
 
-  // Generate curve points
+  // Control points for the bezier curve
+  // Control point 1: end of period (typically days 3-5)
+  const controlPoint1Day = results.periodLength === "1-2days" ? 3 : 
+                           results.periodLength === "3-5days" ? 5 : 7;
+  
+  // Control point 2: around ovulation
+  const ovulationDay = Math.floor(cycleLength / 2);
+  
+  // Create key points (simplified for the bezier curve)
+  const keyPoints = [
+    { day: startDay, energy: 1 },       // Start point: day 1, low energy
+    { day: peakDay, energy: 5 },        // Peak energy point
+    { day: endDay, energy: 1 }          // End point: cycle end, low energy
+  ];
+
+  // Create control points
+  const controlPoints = [
+    { day: controlPoint1Day, energy: 2.5 },    // End of period, moderate energy
+    { day: ovulationDay, energy: 4 }           // Ovulation, high-ish energy
+  ];
+
+  // Generate Bezier curve from the key points and control points
+  const bezierPoints = generateSimplifiedBezierCurve(keyPoints, controlPoints, cycleLength);
+
+  // Generate data points for the full curve (for display and markers)
   const points: ChartPoint[] = [];
   for (let day = 1; day <= cycleLength; day++) {
-    let energy = calculateEnergyLevel(day, cycleLength, peakDay, lowestDay);
+    // Find the closest bezier point for this day
+    const closest = bezierPoints.reduce((prev, curr) => {
+      const prevDiff = Math.abs((prev.x * (cycleLength-1) + 1) - day);
+      const currDiff = Math.abs((curr.x * (cycleLength-1) + 1) - day);
+      return prevDiff < currDiff ? prev : curr;
+    });
     
-    // Adjust curve based on conditions
-    if (results.condition === "pcos" || results.condition === "pcod") {
-      // More inconsistent energy with PCOS
-      energy = energy * (0.8 + Math.random() * 0.4);
-    } else if (results.condition === "thyroid") {
-      // Lower overall energy with thyroid issues
-      energy = energy * 0.85;
-    } else if (results.condition === "menopause") {
-      // More unpredictable energy with menopause
-      energy = energy * (0.7 + Math.random() * 0.6);
-    }
-    
-    points.push({ day, energy });
+    points.push({ 
+      day, 
+      energy: closest.y * 5 // Scale to 1-5 range
+    });
   }
-
-  // Generate bezier curve points for smoother rendering
-  const bezierPoints = generateBezierPoints(points, cycleLength);
 
   // Calculate phase estimates
   const follicular = Math.floor(cycleLength * 0.5); // ~14 days for 28-day cycle
@@ -105,72 +126,92 @@ export const generateChartData = (results: QuizResults): ChartData => {
   };
 };
 
-// Helper function to generate smooth bezier curve points from raw data points
-const generateBezierPoints = (points: ChartPoint[], cycleLength: number): BezierPoint[] => {
-  if (points.length < 2) return [];
-  
+// Generate a simplified bezier curve with 3 key points and 2 control points
+const generateSimplifiedBezierCurve = (
+  keyPoints: ChartPoint[], 
+  controlPoints: ChartPoint[], 
+  cycleLength: number
+): BezierPoint[] => {
   const bezierPoints: BezierPoint[] = [];
-  const tension = 0.3; // Controls the "tightness" of the curve (0 to 1)
-  const stepSize = 0.05; // Smaller step for smoother curve
+  const numPoints = 100; // Number of points to generate along the curve
   
-  // Scale points to 0-1 range for easier bezier calculations
-  const scaledPoints = points.map(point => ({
+  // Scale points to 0-1 range for x (day) and y (energy) values
+  const scaledKeyPoints = keyPoints.map(point => ({
     x: (point.day - 1) / (cycleLength - 1),
-    y: point.energy
+    y: (point.energy - 1) / 4  // Scale 1-5 to 0-1
   }));
   
-  // Add extra point at the end to ensure curve connects back (for cyclical data)
-  scaledPoints.push({
-    x: 1,
-    y: scaledPoints[0].y
-  });
+  const scaledControlPoints = controlPoints.map(point => ({
+    x: (point.day - 1) / (cycleLength - 1),
+    y: (point.energy - 1) / 4  // Scale 1-5 to 0-1
+  }));
   
-  // Generate bezier curve points
-  for (let i = 0; i < scaledPoints.length - 1; i++) {
-    const p0 = scaledPoints[i > 0 ? i - 1 : scaledPoints.length - 2];
-    const p1 = scaledPoints[i];
-    const p2 = scaledPoints[i + 1];
-    const p3 = scaledPoints[i + 2 < scaledPoints.length ? i + 2 : 1];
+  // We'll create a composite bezier curve with two cubic bezier segments:
+  // 1. From start to peak: P0(start), C1(controlPoint1), C2(calculated), P3(peak)
+  // 2. From peak to end: P0(peak), C1(calculated), C2(controlPoint2), P3(end)
+  
+  // First segment: Start to Peak
+  for (let t = 0; t <= 1; t += 1/numPoints) {
+    const p0 = scaledKeyPoints[0]; // Start point
+    const p3 = scaledKeyPoints[1]; // Peak point
+    const c1 = scaledControlPoints[0]; // First control point
     
-    // Calculate control points
-    const cp1x = p1.x + (p2.x - p0.x) * tension;
-    const cp1y = p1.y + (p2.y - p0.y) * tension;
-    const cp2x = p2.x - (p3.x - p1.x) * tension;
-    const cp2y = p2.y - (p3.y - p1.y) * tension;
+    // Calculate the second control point to ensure smooth transition at the peak
+    const c2 = {
+      x: p3.x - (p3.x - c1.x) * 0.5,
+      y: p3.y
+    };
     
-    // Generate points along the bezier curve
-    for (let t = 0; t < 1; t += stepSize) {
-      const t2 = t * t;
-      const t3 = t2 * t;
-      const mt = 1 - t;
-      const mt2 = mt * mt;
-      const mt3 = mt2 * mt;
-      
-      // Bezier formula
-      const x = mt3 * p1.x + 3 * mt2 * t * cp1x + 3 * mt * t2 * cp2x + t3 * p2.x;
-      const y = mt3 * p1.y + 3 * mt2 * t * cp1y + 3 * mt * t2 * cp2y + t3 * p2.y;
-      
-      bezierPoints.push({
-        x,
-        y
-      });
-    }
+    // Calculate point on cubic bezier curve
+    const point = cubicBezier(t, p0, c1, c2, p3);
+    bezierPoints.push(point);
+  }
+  
+  // Second segment: Peak to End
+  for (let t = 0; t <= 1; t += 1/numPoints) {
+    const p0 = scaledKeyPoints[1]; // Peak point
+    const p3 = scaledKeyPoints[2]; // End point
+    const c2 = scaledControlPoints[1]; // Second control point
+    
+    // Calculate the first control point to ensure smooth transition at the peak
+    const c1 = {
+      x: p0.x + (c2.x - p0.x) * 0.5,
+      y: p0.y
+    };
+    
+    // Calculate point on cubic bezier curve
+    const point = cubicBezier(t, p0, c1, c2, p3);
+    bezierPoints.push(point);
   }
   
   return bezierPoints;
 };
 
-// Helper function to calculate energy level at each day
+// Calculate a point on a cubic bezier curve
+const cubicBezier = (t: number, p0: BezierPoint, p1: BezierPoint, p2: BezierPoint, p3: BezierPoint): BezierPoint => {
+  const mt = 1 - t;
+  const mt2 = mt * mt;
+  const mt3 = mt2 * mt;
+  const t2 = t * t;
+  const t3 = t2 * t;
+  
+  return {
+    x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
+    y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y,
+  };
+};
+
+// Helper function to calculate energy level at each day - now returns values between 1-5
 const calculateEnergyLevel = (day: number, cycleLength: number, peakDay: number, lowestDay: number): number => {
-  // Energy level between 0.1 and 1.0
+  // Energy level between 1 and 5
   const distanceToPeak = Math.abs(day - peakDay);
   const distanceToLow = Math.abs(day - lowestDay);
   
   // If closer to peak than low point
   if (distanceToPeak < distanceToLow) {
-    return 0.9 - (distanceToPeak / cycleLength) * 0.8;
+    return 5 - (distanceToPeak / cycleLength) * 4;
   } else {
-    return 0.2 + (distanceToLow / cycleLength) * 0.3;
+    return 1 + (distanceToLow / cycleLength) * 1.5;
   }
 };
 
