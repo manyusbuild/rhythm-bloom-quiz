@@ -1,11 +1,10 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { QuizResults } from "@/utils/quizData";
 import { generateChartData } from "@/utils/chartGenerator";
 import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
 import { SquareCode } from "lucide-react";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface EnergyChartProps {
   results: QuizResults;
@@ -14,75 +13,37 @@ interface EnergyChartProps {
 
 const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   const [devMode, setDevMode] = useState(false);
-  const [hoveredPoint, setHoveredPoint] = useState<null | {
-    x: number;
-    y: number;
-    day: number;
-    energy: number;
-    type: string;
-    source?: string;
-  }>(null);
-  
-  const isMobile = useIsMobile();
   const chartData = generateChartData(results);
-  
   const { 
     points, 
     bezierPoints, 
     cycleLength, 
     peakDay, 
     lowestDay, 
+    peakMessage, 
+    lowMessage, 
     fuzziness,
     displayCycleLengthLabel,
-    conditionMessage,
-    periodEndDay,
-    controlPoints
+    conditionMessage
   } = chartData;
   
-  useEffect(() => {
-    if (isMobile) {
-      // Disable devMode on mobile
-      setDevMode(false);
-    }
-  }, [isMobile]);
-  
-  // SVG dimensions and settings with improved responsiveness
-  const padding = isMobile ? 20 : 60; // Reduced padding on mobile
-  const width = isMobile ? 320 : 900;  // Adjusted for mobile
-  const height = isMobile ? 260 : 400; // Adjusted for mobile
+  // SVG dimensions and settings - increased width for better visibility
+  const width = 900;
+  const height = 400;
+  const padding = 60;
   const innerWidth = width - (padding * 2);
   const innerHeight = height - (padding * 2);
   
-  // Scale the points to fit the SVG
-  const scaledStartPoint = {
-    x: padding,
-    y: padding + innerHeight - ((1 - 1) / 4) * innerHeight // Always at energy level 1
-  };
-  
-  const scaledPeakPoint = {
-    x: padding + (peakDay - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - ((5 - 1) / 4) * innerHeight // Always at energy level 5
-  };
-  
-  const scaledEndPoint = {
-    x: padding + innerWidth,
-    y: padding + innerHeight - ((1 - 1) / 4) * innerHeight // Always at energy level 1
-  };
-  
-  const scaledControlPoint1 = {
-    x: padding + (controlPoints[0].day - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - ((controlPoints[0].energy - 1) / 4) * innerHeight
-  };
-  
-  const scaledControlPoint2 = {
-    x: padding + (controlPoints[1].day - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - ((controlPoints[1].energy - 1) / 4) * innerHeight
-  };
-  
-  // Scale the bezier points for visualization
+  // Scale the bezier points to fit the SVG
   const scaledBezierPoints = bezierPoints.map(point => ({
     x: padding + point.x * innerWidth,
     y: padding + innerHeight - (point.y * innerHeight)
+  }));
+  
+  // Scale the data points for markers
+  const scaledPoints = points.map(point => ({
+    x: padding + (point.day - 1) * (innerWidth / (cycleLength - 1)),
+    y: padding + innerHeight - ((point.energy - 1) / 4) * innerHeight
   }));
   
   // Generate SVG path for bezier curve
@@ -96,28 +57,28 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
     Z
   `;
   
-  // Calculate grid lines (every 5 days)
+  // Calculate key points for developer mode
+  const peakPointIndex = points.findIndex(p => p.day === peakDay);
+  const peakPoint = scaledPoints[peakPointIndex] || scaledPoints[Math.floor(scaledPoints.length / 2)];
+  
+  const lowPointIndex = points.findIndex(p => p.day === lowestDay);
+  const lowPoint = scaledPoints[lowPointIndex] || scaledPoints[scaledPoints.length - 2];
+  
+  // Energy scale labels (descriptive text)
+  const energyLabels = [
+    "Peak Energy", 
+    "High", 
+    "Moderate", 
+    "Low", 
+    "Very Low"
+  ];
+  
+  // Calculate grid lines (every 7 days)
   const dayGridLines = [];
-  const dayInterval = isMobile ? 7 : 5;
-  for (let day = dayInterval; day < cycleLength; day += dayInterval) {
+  for (let day = 7; day < cycleLength; day += 7) {
     const x = padding + (day - 1) * (innerWidth / (cycleLength - 1));
-    dayGridLines.push({ day, x });
+    dayGridLines.push(x);
   }
-  
-  // Energy level grid lines (1-5)
-  const energyGridLines = [1, 2, 3, 4, 5].map(level => {
-    const y = padding + innerHeight - ((level - 1) / 4) * innerHeight;
-    return { level, y };
-  });
-  
-  // Handle point hover in dev mode
-  const handlePointHover = (point: any) => {
-    setHoveredPoint(point);
-  };
-  
-  const handlePointLeave = () => {
-    setHoveredPoint(null);
-  };
   
   return (
     <div className="animate-fade-in">
@@ -135,46 +96,31 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
         )}
       </div>
       
-      {!isMobile && (
-        <div className="relative flex justify-end mb-2">
-          <Toggle 
-            pressed={devMode} 
-            onPressedChange={setDevMode}
-            className="text-xs bg-gray-100 hover:bg-gray-200"
-            size="sm"
-          >
-            <SquareCode className="h-4 w-4 mr-1" /> Dev Mode
-          </Toggle>
-        </div>
-      )}
+      <div className="relative flex justify-end mb-2">
+        <Toggle 
+          pressed={devMode} 
+          onPressedChange={setDevMode}
+          className="text-xs bg-gray-100 hover:bg-gray-200"
+          size="sm"
+        >
+          <SquareCode className="h-4 w-4 mr-1" /> Dev Mode
+        </Toggle>
+      </div>
       
-      <div className="w-full flex justify-center mb-8">
-        <div className={`${isMobile ? 'w-full' : 'w-full max-w-4xl'}`}>
+      <div className="w-full overflow-x-auto mb-8">
+        <div className="min-w-[900px] lg:w-full">
           <svg 
             width="100%" 
-            height={height} 
-            viewBox={`0 0 ${width} ${height}`} 
+            height={height + 80} 
+            viewBox={`0 0 ${width} ${height + 80}`} 
             preserveAspectRatio="xMidYMid meet"
             className="mx-auto"
           >
-            {/* Define enhanced gradients for energy curve fill */}
+            {/* Define gradient for energy curve fill */}
             <defs>
-              <linearGradient id="energyGradientTop" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#A7F3D0" stopOpacity="0.9" /> {/* Soft green for high energy */}
-                <stop offset="50%" stopColor="#D1FAE5" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#D1FAE5" stopOpacity="0.1" />
-              </linearGradient>
-              
-              <linearGradient id="energyGradientBottom" x1="0%" y1="100%" x2="0%" y2="0%">
-                <stop offset="0%" stopColor="#FECDD3" stopOpacity="0.9" /> {/* Soft pink for low energy */}
-                <stop offset="50%" stopColor="#FEE2E2" stopOpacity="0.5" />
-                <stop offset="100%" stopColor="#FEE2E2" stopOpacity="0.1" />
-              </linearGradient>
-              
-              <linearGradient id="energyGradientCombined" x1="0%" y1="0%" x2="0%" y2="100%">
-                <stop offset="0%" stopColor="#A7F3D0" stopOpacity="0.8" />
-                <stop offset="50%" stopColor="#FEF3C7" stopOpacity="0.4" /> {/* Blended midpoint */}
-                <stop offset="100%" stopColor="#FECDD3" stopOpacity="0.8" />
+              <linearGradient id="energyGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                <stop offset="0%" stopColor="#9b87f5" stopOpacity="0.7" />
+                <stop offset="100%" stopColor="#FFDEE2" stopOpacity="0.5" />
               </linearGradient>
               
               {/* Pattern for fuzzy lines if needed */}
@@ -183,41 +129,39 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               </pattern>
             </defs>
             
-            {/* Chart grid - subtle horizontal lines for energy levels */}
-            {energyGridLines.map((line) => (
+            {/* Chart grid - horizontal lines for each energy level */}
+            {Array.from({ length: 5 }).map((_, i) => (
               <line 
-                key={`h-line-${line.level}`}
+                key={`h-line-${i}`}
                 x1={padding} 
-                y1={line.y} 
+                y1={padding + (innerHeight / 4) * i} 
                 x2={width - padding} 
-                y2={line.y}
+                y2={padding + (innerHeight / 4) * i}
                 className="energy-chart-grid" 
                 stroke="#E5E7EB"
                 strokeWidth="1"
-                strokeOpacity="0.2"
               />
             ))}
             
-            {/* Vertical grid lines every 5 days */}
-            {dayGridLines.map((line, i) => (
+            {/* Vertical grid lines every 7 days */}
+            {dayGridLines.map((x, i) => (
               <line 
                 key={`v-line-${i}`}
-                x1={line.x} 
+                x1={x} 
                 y1={padding} 
-                x2={line.x} 
+                x2={x} 
                 y2={height - padding}
                 className="energy-chart-grid" 
                 stroke="#E5E7EB"
                 strokeWidth="1"
-                strokeOpacity="0.2"
               />
             ))}
             
-            {/* Energy curve area fill with bi-directional gradient */}
+            {/* Energy curve area fill */}
             <path 
               d={areaPath} 
               className="energy-gradient-area" 
-              fill="url(#energyGradientCombined)"
+              fill="url(#energyGradient)"
             />
             
             {/* Energy curve line */}
@@ -235,199 +179,95 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               <g className="developer-markers">
                 {/* Start point marker */}
                 <circle 
-                  cx={scaledStartPoint.x} 
-                  cy={scaledStartPoint.y} 
+                  cx={scaledBezierPoints[0].x} 
+                  cy={scaledBezierPoints[0].y} 
                   r="5" 
                   fill="#333"
                   stroke="#fff" 
                   strokeWidth="1"
-                  onMouseEnter={() => handlePointHover({
-                    x: scaledStartPoint.x, 
-                    y: scaledStartPoint.y, 
-                    day: 1, 
-                    energy: 1,
-                    type: 'Start Point',
-                    source: 'Fixed at day 1, energy level 1'
-                  })}
-                  onMouseLeave={handlePointLeave}
                 />
                 <text 
-                  x={scaledStartPoint.x} 
-                  y={scaledStartPoint.y - 12} 
+                  x={scaledBezierPoints[0].x} 
+                  y={scaledBezierPoints[0].y - 10} 
                   fontSize="10" 
                   fill="#333" 
                   textAnchor="middle"
                 >
-                  Start
+                  Start: Day 1
                 </text>
                 
                 {/* Peak point marker */}
                 <circle 
-                  cx={scaledPeakPoint.x} 
-                  cy={scaledPeakPoint.y} 
+                  cx={peakPoint.x} 
+                  cy={peakPoint.y} 
                   r="5" 
-                  fill="#10B981"
+                  fill="#ff7193"
                   stroke="#fff" 
                   strokeWidth="1"
-                  onMouseEnter={() => handlePointHover({
-                    x: scaledPeakPoint.x, 
-                    y: scaledPeakPoint.y, 
-                    day: peakDay, 
-                    energy: 5,
-                    type: 'Peak',
-                    source: `Based on ${results.peakEnergy} input`
-                  })}
-                  onMouseLeave={handlePointLeave}
                 />
                 <text 
-                  x={scaledPeakPoint.x} 
-                  y={scaledPeakPoint.y - 12} 
+                  x={peakPoint.x} 
+                  y={peakPoint.y - 10} 
                   fontSize="10" 
                   fill="#333" 
                   textAnchor="middle"
                 >
-                  Peak (Day {peakDay})
+                  Peak: Day {peakDay}
+                </text>
+                
+                {/* Low point marker */}
+                <circle 
+                  cx={lowPoint.x} 
+                  cy={lowPoint.y} 
+                  r="5" 
+                  fill="#9b87f5"
+                  stroke="#fff" 
+                  strokeWidth="1"
+                />
+                <text 
+                  x={lowPoint.x} 
+                  y={lowPoint.y + 15} 
+                  fontSize="10" 
+                  fill="#333" 
+                  textAnchor="middle"
+                >
+                  Low: Day {lowestDay}
                 </text>
                 
                 {/* End point marker */}
                 <circle 
-                  cx={scaledEndPoint.x} 
-                  cy={scaledEndPoint.y} 
+                  cx={scaledBezierPoints[scaledBezierPoints.length - 1].x} 
+                  cy={scaledBezierPoints[scaledBezierPoints.length - 1].y} 
                   r="5" 
                   fill="#333"
                   stroke="#fff" 
                   strokeWidth="1"
-                  onMouseEnter={() => handlePointHover({
-                    x: scaledEndPoint.x, 
-                    y: scaledEndPoint.y, 
-                    day: cycleLength, 
-                    energy: 1,
-                    type: 'End Point',
-                    source: `Fixed at cycle end (day ${cycleLength}), energy level 1`
-                  })}
-                  onMouseLeave={handlePointLeave}
                 />
                 <text 
-                  x={scaledEndPoint.x} 
-                  y={scaledEndPoint.y - 12} 
+                  x={scaledBezierPoints[scaledBezierPoints.length - 1].x} 
+                  y={scaledBezierPoints[scaledBezierPoints.length - 1].y - 10} 
                   fontSize="10" 
                   fill="#333" 
                   textAnchor="middle"
                 >
-                  End
+                  End: Day {cycleLength}
                 </text>
                 
-                {/* Control point 1 marker */}
-                <circle 
-                  cx={scaledControlPoint1.x} 
-                  cy={scaledControlPoint1.y} 
-                  r="5" 
-                  fill="#9b87f5"
-                  stroke="#fff" 
-                  strokeWidth="1"
-                  strokeDasharray="2,2"
-                  onMouseEnter={() => handlePointHover({
-                    x: scaledControlPoint1.x, 
-                    y: scaledControlPoint1.y, 
-                    day: controlPoints[0].day, 
-                    energy: controlPoints[0].energy,
-                    type: 'Control Point 1',
-                    source: `Between period end (day ${periodEndDay}) and peak (day ${peakDay})`
-                  })}
-                  onMouseLeave={handlePointLeave}
-                />
-                <text 
-                  x={scaledControlPoint1.x} 
-                  y={scaledControlPoint1.y - 12} 
-                  fontSize="10" 
-                  fill="#666" 
-                  textAnchor="middle"
-                >
-                  Control 1
-                </text>
-                
-                {/* Control point 2 marker */}
-                <circle 
-                  cx={scaledControlPoint2.x} 
-                  cy={scaledControlPoint2.y} 
-                  r="5" 
-                  fill="#9b87f5"
-                  stroke="#fff" 
-                  strokeWidth="1"
-                  strokeDasharray="2,2"
-                  onMouseEnter={() => handlePointHover({
-                    x: scaledControlPoint2.x, 
-                    y: scaledControlPoint2.y, 
-                    day: controlPoints[1].day, 
-                    energy: controlPoints[1].energy,
-                    type: 'Control Point 2',
-                    source: `Between peak (day ${peakDay}) and cycle end (day ${cycleLength})`
-                  })}
-                  onMouseLeave={handlePointLeave}
-                />
-                <text 
-                  x={scaledControlPoint2.x} 
-                  y={scaledControlPoint2.y - 12} 
-                  fontSize="10" 
-                  fill="#666" 
-                  textAnchor="middle"
-                >
-                  Control 2
-                </text>
-                
-                {/* Low energy day marker */}
-                <circle 
-                  cx={padding + (lowestDay - 1) * (innerWidth / (cycleLength - 1))} 
-                  cy={padding + innerHeight - ((1 - 1) / 4) * innerHeight} 
-                  r="5" 
-                  fill="#FCA5A5"
-                  stroke="#fff" 
-                  strokeWidth="1"
-                  onMouseEnter={() => handlePointHover({
-                    x: padding + (lowestDay - 1) * (innerWidth / (cycleLength - 1)), 
-                    y: padding + innerHeight - ((1 - 1) / 4) * innerHeight, 
-                    day: lowestDay, 
-                    energy: 1,
-                    type: 'Lowest Energy',
-                    source: `Based on ${results.lowestEnergy} input`
-                  })}
-                  onMouseLeave={handlePointLeave}
-                />
-                <text 
-                  x={padding + (lowestDay - 1) * (innerWidth / (cycleLength - 1))} 
-                  y={padding + innerHeight - ((1 - 1) / 4) * innerHeight + 15} 
-                  fontSize="10" 
-                  fill="#666" 
-                  textAnchor="middle"
-                >
-                  Low (Day {lowestDay})
-                </text>
-
-                {/* Hover tooltip */}
-                {hoveredPoint && (
-                  <g>
-                    <rect 
-                      x={hoveredPoint.x + 15}
-                      y={hoveredPoint.y - 60}
-                      width="160"
-                      height="50"
-                      rx="4"
-                      fill="white"
-                      stroke="#ccc"
+                {/* Control points markers (for Bezier curve visualization) */}
+                {bezierPoints.map((point, i) => (
+                  i % 10 === 0 && i > 0 && i < bezierPoints.length - 1 && (
+                    <circle 
+                      key={`ctrl-${i}`}
+                      cx={point.x} 
+                      cy={point.y} 
+                      r="3" 
+                      fill="none"
+                      stroke="#666" 
                       strokeWidth="1"
+                      strokeDasharray="2,2"
                     />
-                    <text 
-                      x={hoveredPoint.x + 25}
-                      y={hoveredPoint.y - 45}
-                      fontSize="10" 
-                      fill="#333"
-                    >
-                      <tspan x={hoveredPoint.x + 25} dy="0">{hoveredPoint.type}</tspan>
-                      <tspan x={hoveredPoint.x + 25} dy="12">Day: {hoveredPoint.day}, Energy: {hoveredPoint.energy}</tspan>
-                      <tspan x={hoveredPoint.x + 25} dy="12">{hoveredPoint.source}</tspan>
-                    </text>
-                  </g>
-                )}
+                  )
+                ))}
               </g>
             )}
             
@@ -441,44 +281,59 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               strokeWidth="2" 
             />
             
+            {/* Y-axis */}
+            <line 
+              x1={padding} 
+              y1={padding} 
+              x2={padding} 
+              y2={height - padding} 
+              stroke="#8E9196" 
+              strokeWidth="2" 
+            />
+            
             {/* X-axis labels */}
-            <text x={padding} y={height - 10} fontSize={isMobile ? "10" : "12"} textAnchor="middle" fill="#8E9196">
+            <text x={padding} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
               Day 1
             </text>
-            
-            {!isMobile && dayGridLines.map((line, i) => (
+            {dayGridLines.map((x, i) => (
               <text 
                 key={`x-label-${i}`}
-                x={line.x} 
+                x={x} 
                 y={height - 10} 
                 fontSize="12" 
                 textAnchor="middle" 
                 fill="#8E9196"
               >
-                Day {line.day}
+                Day {(i + 1) * 7}
               </text>
             ))}
-            
-            <text x={padding + innerWidth} y={height - 10} fontSize={isMobile ? "10" : "12"} textAnchor="middle" fill="#8E9196">
+            <text x={padding + innerWidth} y={height - 10} fontSize="12" textAnchor="middle" fill="#8E9196">
               {displayCycleLengthLabel}
               {fuzziness.xAxis && <tspan fontStyle="italic">*</tspan>}
             </text>
             
-            {/* Only show "Peak Energy" label at the top */}
-            <text 
-              x={padding - 10} 
-              y={padding} 
-              fontSize="12" 
-              fill="#8E9196" 
-              textAnchor="end"
-              dominantBaseline="middle"
-            >
-              Peak Energy
+            {/* Y-axis labels */}
+            {energyLabels.map((label, i) => (
+              <text 
+                key={`y-label-${i}`} 
+                x={padding - 10} 
+                y={padding + (innerHeight / 4) * i} 
+                fontSize="12" 
+                fill="#8E9196" 
+                textAnchor="end"
+                dominantBaseline="middle"
+              >
+                {label}
+              </text>
+            ))}
+            
+            <text x={padding - 40} y={padding - 20} fontSize="14" fill="#8E9196" fontWeight="bold" dominantBaseline="middle">
+              Energy Level
             </text>
             
             {/* Fuzzy indicator explanation if needed */}
-            {(fuzziness.xAxis || fuzziness.overall) && !isMobile && (
-              <text x={padding} y={height - padding + 25} fontSize="10" fill="#666" fontStyle="italic">
+            {(fuzziness.xAxis || fuzziness.overall) && (
+              <text x={padding} y={height + 30} fontSize="10" fill="#666" fontStyle="italic">
                 *Cycle patterns may vary
               </text>
             )}
@@ -503,3 +358,4 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
 };
 
 export default EnergyChart;
+
