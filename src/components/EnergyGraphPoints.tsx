@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -237,8 +238,12 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     const cp3x = R.x + (S.x - R.x) / 2;
     const cp3y = R.y; // Same y-level as R for flat tangent
     
-    // T's incoming control point: horizontal length equal to twice the distance from S to T
-    const cp4x = T.x - (T.x - S.x) * 2;
+    // T's incoming control point: horizontal length equal to max(twice the distance from S to T, 10 days)
+    // Calculate minimum length for the handle (5 days * 2)
+    const minHandleLength = (innerWidth / (chartData.cycleLength - 1)) * 5 * 2;
+    // Use the maximum of actual distance or minimum distance
+    const handleLength = Math.max((T.x - S.x) * 2, minHandleLength);
+    const cp4x = T.x - handleLength;
     const cp4y = T.y; // Same y-level as T for flat tangent
     
     // Build the path
@@ -259,7 +264,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     );
   };
   
-  // Render SVG point with hover card - Fixed tooltip functionality
+  // Render SVG point with hover card - Fix tooltip positioning
   const renderPoint = (point: ChartPoint) => {
     const x = xScale(point.day);
     const y = yScale(point.energy);
@@ -280,7 +285,12 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
                   style={{ touchAction: 'none' }}
                 />
               </HoverCardTrigger>
-              <HoverCardContent className="w-64 p-3">
+              <HoverCardContent 
+                className="w-64 p-3" 
+                side="top"
+                align="center"
+                sideOffset={5}
+              >
                 <div className="space-y-1">
                   <h4 className="font-medium">{point.name} ({point.index})</h4>
                   <p className="text-sm text-gray-500">{point.description}</p>
