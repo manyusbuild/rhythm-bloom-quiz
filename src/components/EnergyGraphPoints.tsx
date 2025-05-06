@@ -1,10 +1,9 @@
-
 import React from 'react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QuizResults } from "@/utils/quizData";
 import { generateChartData } from "@/utils/chartGenerator";
-import { CircleDot, Info } from "lucide-react";
+import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface EnergyGraphPointsProps {
@@ -15,10 +14,16 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   const isMobile = useIsMobile();
   const chartData = generateChartData(results);
   
-  // SVG canvas dimensions
-  const padding = { top: 40, right: 40, bottom: 40, left: 60 };
+  // SVG canvas dimensions - reduced top/bottom padding on desktop, increased height on mobile
+  const padding = { 
+    top: isMobile ? 30 : 20, 
+    right: 20, 
+    bottom: isMobile ? 30 : 20, 
+    left: 60 
+  };
+  
   const width = isMobile ? 300 : 600;
-  const height = 300;
+  const height = isMobile ? 400 : 300; // Increased height for mobile
   const innerWidth = width - padding.left - padding.right;
   const innerHeight = height - padding.top - padding.bottom;
   
@@ -34,29 +39,20 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   
   // Calculate key points
   const points = [
-    { name: "Cycle Start", day: 1, energy: 1, description: "Day 1 - Beginning of your period" },
-    { name: "Period End", day: chartData.periodEndDay, energy: 2.5, description: "End of your menstrual flow" },
-    { name: "Peak Energy", day: chartData.peakDay, energy: 5, description: "Your highest energy point" },
-    { name: "Lowest Energy", day: chartData.lowestDay, energy: 1, description: "Your lowest energy point" },
-    { name: "Cycle End", day: chartData.cycleLength, energy: 1, description: `Day ${chartData.cycleLength} - End of your cycle` }
+    { index: 1, name: "Cycle Start", day: 1, energy: 1, description: "Day 1 - Beginning of your period" },
+    { index: 2, name: "Period End", day: chartData.periodEndDay, energy: 2.5, description: "End of your menstrual flow" },
+    { index: 3, name: "Peak Energy", day: chartData.peakDay, energy: 5, description: "Your highest energy point" },
+    { index: 4, name: "Lowest Energy", day: chartData.lowestDay, energy: 1, description: "Your lowest energy point" },
+    { index: 5, name: "Cycle End", day: chartData.cycleLength, energy: 1, description: `Day ${chartData.cycleLength} - End of your cycle` }
   ];
   
-  // Add ovulation marker (approximately cycle length - 14)
-  const ovulationDay = Math.max(Math.floor(chartData.cycleLength / 2), chartData.cycleLength - 14);
-  const ovulationPoint = { 
-    name: "Ovulation", 
-    day: ovulationDay, 
-    energy: 3, 
-    description: "Approximate time of ovulation" 
-  };
-  
-  // Function to generate grid lines
+  // Function to generate grid lines - one vertical line per day
   const generateGridLines = () => {
     const xLines = [];
     const yLines = [];
     
-    // X-axis grid lines (every 5 days)
-    for (let day = 5; day <= chartData.cycleLength; day += 5) {
+    // X-axis grid lines (one per day)
+    for (let day = 1; day <= chartData.cycleLength; day++) {
       xLines.push(
         <line 
           key={`x-${day}`}
@@ -64,8 +60,9 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
           y1={padding.top} 
           x2={xScale(day)} 
           y2={height - padding.bottom}
-          stroke="#e2e8f0"
-          strokeDasharray="4"
+          stroke={day % 5 === 0 ? "#e2e8f0" : "#f1f5f9"} // More prominent lines every 5 days
+          strokeWidth={day % 5 === 0 ? 1 : 0.5}
+          strokeDasharray={day % 5 === 0 ? "4" : "2"}
         />
       );
     }
@@ -92,7 +89,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   const generateXAxisLabels = () => {
     const labels = [];
     
-    // Add labels for day 1 and cycle end
+    // Add label for day 1
     labels.push(
       <text 
         key="x-1" 
@@ -117,7 +114,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
         fontSize="12"
         fill="#64748b"
       >
-        Day {middleDay}
+        ~{middleDay} days
       </text>
     );
     
@@ -131,7 +128,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
         fontSize="12"
         fill="#64748b"
       >
-        Day {chartData.cycleLength}
+        ~{chartData.cycleLength} days
       </text>
     );
     
@@ -163,25 +160,25 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   };
   
   // Render SVG point with hover card
-  const renderPoint = (point: typeof points[0], index: number) => {
+  const renderPoint = (point: typeof points[0]) => {
     const x = xScale(point.day);
     const y = yScale(point.energy);
     
     return (
-      <HoverCard key={`point-${index}`}>
+      <HoverCard key={`point-${point.index}`}>
         <HoverCardTrigger asChild>
           <g className="cursor-pointer" transform={`translate(${x}, ${y})`}>
             <circle 
               r={6} 
-              fill={point.name === "Ovulation" ? "#9ca3af" : "#9b87f5"}
+              fill="#9b87f5"
               stroke="white"
               strokeWidth={2}
             />
           </g>
         </HoverCardTrigger>
-        <HoverCardContent className="w-60 p-3">
+        <HoverCardContent className="w-64 p-3">
           <div className="space-y-1">
-            <h4 className="font-medium">{point.name}</h4>
+            <h4 className="font-medium">{point.name} ({point.index})</h4>
             <p className="text-sm text-gray-500">{point.description}</p>
             <div className="text-xs text-gray-400">
               Day: {point.day} • Energy: {point.energy}
@@ -193,7 +190,10 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   };
   
   return (
-    <div className="w-full h-full relative">
+    <div className={cn(
+      "w-full h-full relative",
+      isMobile && "min-h-[400px]" // Ensure minimum height on mobile
+    )}>
       <div className="absolute top-2 right-2">
         <HoverCard>
           <HoverCardTrigger asChild>
@@ -257,20 +257,13 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
           Your Energy Cycle Points
         </text>
         
-        {/* Chart points */}
+        {/* Chart points - excluding ovulation point */}
         {points.map(renderPoint)}
-        {renderPoint(ovulationPoint, points.length)}
       </svg>
       
+      {/* Empty legend container - keeping the structure for future use */}
       <div className="mt-4 flex justify-center flex-wrap gap-4 text-xs text-gray-500">
-        <div className="flex items-center gap-1">
-          <CircleDot size={14} className="text-rhythm-accent1" />
-          <span>Key energy points</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <CircleDot size={14} className="text-gray-400" />
-          <span>Estimated ovulation</span>
-        </div>
+        {/* Legend content removed as requested */}
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { QuizResults } from "@/utils/quizData";
 import { ArrowRight } from "lucide-react";
 import EnergyGraphPoints from "@/components/EnergyGraphPoints";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ResultsScreenProps {
   results: QuizResults;
@@ -12,10 +13,12 @@ interface ResultsScreenProps {
 }
 
 const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
+  const isMobile = useIsMobile();
+  
   return (
-    <div className="animate-fade-in flex flex-col gap-8">
+    <div className="animate-fade-in flex flex-col gap-6 md:gap-8">
       {/* Header section */}
-      <div className="text-center space-y-3">
+      <div className="text-center space-y-2 md:space-y-3">
         <h2 className="text-2xl md:text-3xl font-semibold text-gray-800">
           Your Energy Rhythm Map
         </h2>
@@ -24,33 +27,20 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
         </p>
       </div>
       
-      {/* Graph container */}
-      <div className="relative bg-white p-4 rounded-lg border border-gray-100 shadow-sm">
-        <div className="aspect-[4/3] w-full bg-gray-50 rounded">
-          <div className="h-full w-full p-2">
+      {/* Graph container - adjusted for better mobile display */}
+      <div className="relative bg-white p-2 md:p-4 rounded-lg border border-gray-100 shadow-sm">
+        <div className={cn(
+          "aspect-auto w-full bg-gray-50 rounded",
+          isMobile ? "h-[400px]" : "aspect-[4/3]"
+        )}>
+          <div className="h-full w-full">
             <EnergyGraphPoints results={results} />
-          </div>
-        </div>
-        
-        {/* Graph legend */}
-        <div className="mt-4 flex flex-wrap gap-4 justify-center text-sm">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-rhythm-accent1"></div>
-            <span>Energy level</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-purple-400"></div>
-            <span>Peak days</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-gray-400"></div>
-            <span>Low energy</span>
           </div>
         </div>
       </div>
       
       {/* Form summary recap */}
-      <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+      <div className="bg-white p-4 md:p-6 rounded-lg border border-gray-100 shadow-sm">
         <h3 className="text-lg font-medium mb-4">Your Cycle Profile</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
@@ -79,7 +69,7 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
       </div>
       
       {/* Text-based insights */}
-      <div className="bg-white p-6 rounded-lg border border-gray-100 shadow-sm">
+      <div className="bg-white p-4 md:p-6 rounded-lg border border-gray-100 shadow-sm">
         <h3 className="text-lg font-medium mb-4">Energy Rhythm Insights</h3>
         <div className="space-y-4 text-rhythm-text">
           <p>
@@ -99,7 +89,7 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
       </div>
       
       {/* CTA Section with avatar */}
-      <div className="bg-gradient-to-r from-rhythm-accent2/10 to-purple-200/20 p-6 rounded-lg">
+      <div className="bg-gradient-to-r from-rhythm-accent2/10 to-purple-200/20 p-4 md:p-6 rounded-lg">
         <div className="flex flex-col md:flex-row items-center gap-4">
           <Avatar className="w-16 h-16 border-2 border-white">
             <AvatarImage src="/placeholder.svg" alt="Coach" />
@@ -116,7 +106,7 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
       </div>
       
       {/* Footer */}
-      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-4">
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 mt-2">
         <Button
           onClick={onReset}
           variant="outline"
@@ -134,5 +124,8 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
     </div>
   );
 };
+
+// Add missing import for cn utility
+import { cn } from "@/lib/utils";
 
 export default ResultsScreen;
