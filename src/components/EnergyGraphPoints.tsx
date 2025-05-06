@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -8,20 +9,6 @@ import { cn } from "@/lib/utils";
 
 interface EnergyGraphPointsProps {
   results: QuizResults;
-}
-
-// Define the point type to fix the TypeScript error
-interface ChartPoint {
-  index: number;
-  name: string;
-  day: number;
-  energy: number;
-  description: string;
-}
-
-interface CoordinatePoint {
-  x: number;
-  y: number;
 }
 
 const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
@@ -52,7 +39,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   };
   
   // Calculate key points
-  const points: ChartPoint[] = [
+  const points = [
     { index: 1, name: "Cycle Start", day: 1, energy: 1, description: "Day 1 - Beginning of your period" },
     { index: 2, name: "Period End", day: chartData.periodEndDay, energy: 2.5, description: "End of your menstrual flow" },
     { index: 3, name: "Peak Energy", day: chartData.peakDay, energy: 5, description: "Your highest energy point" },
@@ -60,64 +47,125 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     { index: 5, name: "Cycle End", day: chartData.cycleLength, energy: 1, description: `Day ${chartData.cycleLength} - End of your cycle` }
   ];
   
-  // Create ghost points for loopable curves
-  const createGhostPoints = (originalPoints: ChartPoint[]): ChartPoint[] => {
-    const cycleDuration = chartData.cycleLength;
-    
-    // Ghost points before the start (reusing Lowest and Peak)
-    const preGhost1: ChartPoint = {
-      ...originalPoints[3], // Lowest Energy
-      index: -1,
-      day: originalPoints[3].day - cycleDuration // Position before Day 1
-    };
-    
-    const preGhost2: ChartPoint = {
-      ...originalPoints[2], // Peak Energy
-      index: 0,
-      day: originalPoints[2].day - cycleDuration // Position before Day 1
-    };
-    
-    // Ghost points after the end (reusing Period End and Cycle Start)
-    const postGhost1: ChartPoint = {
-      ...originalPoints[1], // Period End
-      index: 6, 
-      day: originalPoints[1].day + cycleDuration // Position after cycle end
-    };
-    
-    const postGhost2: ChartPoint = {
-      ...originalPoints[0], // Cycle Start
-      index: 7,
-      day: originalPoints[0].day + cycleDuration // Position after cycle end
-    };
-    
-    // Combine all points for the loopable cardinal spline
-    return [preGhost1, preGhost2, ...originalPoints, postGhost1, postGhost2];
-  };
-  
-  // Generate extended points array for loopable splines
-  const extendedPoints = createGhostPoints(points);
-  
   // Function to generate grid lines - one vertical line per day
   const generateGridLines = () => {
-    // ... keep existing code (grid line generation)
+    const xLines = [];
+    const yLines = [];
+    
+    // X-axis grid lines (one per day)
+    for (let day = 1; day <= chartData.cycleLength; day++) {
+      xLines.push(
+        <line 
+          key={`x-${day}`}
+          x1={xScale(day)} 
+          y1={padding.top} 
+          x2={xScale(day)} 
+          y2={height - padding.bottom}
+          stroke={day % 5 === 0 ? "#e2e8f0" : "#f1f5f9"} // More prominent lines every 5 days
+          strokeWidth={day % 5 === 0 ? 1 : 0.5}
+          strokeDasharray={day % 5 === 0 ? "4" : "2"}
+        />
+      );
+    }
+    
+    // Y-axis grid lines (for each energy level)
+    for (let energy = 0; energy <= 5; energy++) {
+      yLines.push(
+        <line 
+          key={`y-${energy}`}
+          x1={padding.left} 
+          y1={yScale(energy)} 
+          x2={width - padding.right} 
+          y2={yScale(energy)}
+          stroke="#e2e8f0"
+          strokeDasharray={energy === 0 ? "0" : "4"}
+        />
+      );
+    }
+    
+    return [...xLines, ...yLines];
   };
   
   // Function to generate x-axis labels
   const generateXAxisLabels = () => {
-    // ... keep existing code (X axis label generation)
+    const labels = [];
+    
+    // Add label for day 1
+    labels.push(
+      <text 
+        key="x-1" 
+        x={xScale(1)} 
+        y={height - padding.bottom + 20}
+        textAnchor="middle"
+        fontSize="12"
+        fill="#64748b"
+      >
+        Day 1
+      </text>
+    );
+    
+    // Add label for middle day
+    const middleDay = Math.floor(chartData.cycleLength / 2);
+    labels.push(
+      <text 
+        key={`x-${middleDay}`} 
+        x={xScale(middleDay)} 
+        y={height - padding.bottom + 20}
+        textAnchor="middle"
+        fontSize="12"
+        fill="#64748b"
+      >
+        ~{middleDay} days
+      </text>
+    );
+    
+    // Add label for cycle end
+    labels.push(
+      <text 
+        key={`x-${chartData.cycleLength}`} 
+        x={xScale(chartData.cycleLength)} 
+        y={height - padding.bottom + 20}
+        textAnchor="middle"
+        fontSize="12"
+        fill="#64748b"
+      >
+        ~{chartData.cycleLength} days
+      </text>
+    );
+    
+    return labels;
   };
   
   // Function to generate y-axis labels
   const generateYAxisLabels = () => {
-    // ... keep existing code (Y axis label generation)
+    const labels = [];
+    const energyLabels = ["Very Low", "Low", "Moderate", "High", "Peak"];
+    
+    for (let energy = 1; energy <= 5; energy++) {
+      labels.push(
+        <text 
+          key={`y-${energy}`} 
+          x={padding.left - 10} 
+          y={yScale(energy)}
+          textAnchor="end"
+          dominantBaseline="middle"
+          fontSize="12"
+          fill="#64748b"
+        >
+          {energyLabels[energy-1]}
+        </text>
+      );
+    }
+    
+    return labels;
   };
   
-  // Generate cardinal spline paths with proper TypeScript typing
-  const generateCardinalSpline = (pointsArray: ChartPoint[], tension: number, color: string) => {
-    if (pointsArray.length < 2) return null;
+  // Generate cardinal spline paths
+  const generateCardinalSpline = (points: typeof points[0][], tension: number, color: string) => {
+    if (points.length < 2) return null;
     
     // Sort points by day to ensure proper ordering
-    const sortedPoints = [...pointsArray].sort((a, b) => a.day - b.day);
+    const sortedPoints = [...points].sort((a, b) => a.day - b.day);
     
     const pointCoords = sortedPoints.map(point => ({
       x: xScale(point.day),
@@ -153,8 +201,8 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     );
   };
   
-  // Render SVG point with hover card - Fixed tooltip functionality using foreignObject
-  const renderPoint = (point: ChartPoint) => {
+  // Render SVG point with hover card - Fixed tooltip functionality
+  const renderPoint = (point: typeof points[0]) => {
     const x = xScale(point.day);
     const y = yScale(point.energy);
     
@@ -246,9 +294,9 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
         {generateXAxisLabels()}
         {generateYAxisLabels()}
         
-        {/* Loopable Cardinal Splines with ghost points */}
-        {generateCardinalSpline(extendedPoints, 0.5, 'red')}
-        {generateCardinalSpline(extendedPoints, 1, 'blue')}
+        {/* Experimental Cardinal Splines */}
+        {generateCardinalSpline(points, 0.5, 'red')}
+        {generateCardinalSpline(points, 1, 'blue')}
         
         {/* Chart points with tooltips - these must be rendered LAST to be on top */}
         {points.map(renderPoint)}
