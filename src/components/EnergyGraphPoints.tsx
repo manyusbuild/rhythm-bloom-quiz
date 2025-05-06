@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -9,6 +8,15 @@ import { cn } from "@/lib/utils";
 
 interface EnergyGraphPointsProps {
   results: QuizResults;
+}
+
+// Define a type for the points
+interface ChartPoint {
+  index: number;
+  name: string;
+  day: number;
+  energy: number;
+  description: string;
 }
 
 const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
@@ -39,7 +47,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   };
   
   // Calculate key points
-  const points = [
+  const points: ChartPoint[] = [
     { index: 1, name: "Cycle Start", day: 1, energy: 1, description: "Day 1 - Beginning of your period" },
     { index: 2, name: "Period End", day: chartData.periodEndDay, energy: 3, description: "End of your menstrual flow" }, // Updated energy to 3
     { index: 3, name: "Peak Energy", day: chartData.peakDay, energy: 5, description: "Your highest energy point" },
@@ -161,7 +169,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   };
   
   // Generate cardinal spline paths
-  const generateCardinalSpline = (points: typeof points, tension: number, color: string) => {
+  const generateCardinalSpline = (points: ChartPoint[], tension: number, color: string) => {
     if (points.length < 2) return null;
     
     // Sort points by day to ensure proper ordering
@@ -252,7 +260,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   };
   
   // Render SVG point with hover card - Fixed tooltip functionality
-  const renderPoint = (point: typeof points[0]) => {
+  const renderPoint = (point: ChartPoint) => {
     const x = xScale(point.day);
     const y = yScale(point.energy);
     
