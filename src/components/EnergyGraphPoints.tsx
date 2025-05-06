@@ -6,6 +6,7 @@ import { QuizResults } from "@/utils/quizData";
 import { generateChartData } from "@/utils/chartGenerator";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface EnergyGraphPointsProps {
   results: QuizResults;
@@ -238,12 +239,23 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     const cp3x = R.x + (S.x - R.x) / 2;
     const cp3y = R.y; // Same y-level as R for flat tangent
     
-    // T's incoming control point: horizontal length equal to max(twice the distance from S to T, 10 days)
-    // Calculate minimum length for the handle (5 days * 2)
-    const minHandleLength = (innerWidth / (chartData.cycleLength - 1)) * 5 * 2;
-    // Use the maximum of actual distance or minimum distance
-    const handleLength = Math.max((T.x - S.x) * 2, minHandleLength);
-    const cp4x = T.x - handleLength;
+    // Special handling for when S and T are very close or coincide (duringPeriod selection)
+    // Calculate distance between S and T
+    const sTDistance = T.x - S.x;
+    
+    // Calculate minimum handle length (5 days)
+    const minHandleLength = (innerWidth / (chartData.cycleLength - 1)) * 5;
+    
+    // For the case where S and T are close or the same point:
+    // If the distance is small (less than minimum handle), special handling required
+    let cp4x = T.x - Math.max(sTDistance * 2, minHandleLength * 2);
+    
+    // Fix for when "duringPeriod" is selected and S may coincide with T
+    if (results.lowestEnergy === "duringPeriod") {
+      // Ensure cp4x is never greater than T.x
+      cp4x = Math.min(cp4x, T.x - minHandleLength * 1.5);
+    }
+    
     const cp4y = T.y; // Same y-level as T for flat tangent
     
     // Build the path
@@ -264,7 +276,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     );
   };
   
-  // Render SVG point with hover card - Fix tooltip positioning
+  // Render SVG point with tooltip
   const renderPoint = (point: ChartPoint) => {
     const x = xScale(point.day);
     const y = yScale(point.energy);
@@ -278,28 +290,30 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
           height={12}
         >
           <div className="h-full w-full flex items-center justify-center">
-            <HoverCard>
-              <HoverCardTrigger asChild>
-                <div 
-                  className="h-[12px] w-[12px] rounded-full bg-[#9b87f5] border-2 border-white cursor-pointer"
-                  style={{ touchAction: 'none' }}
-                />
-              </HoverCardTrigger>
-              <HoverCardContent 
-                className="w-64 p-3" 
-                side="top"
-                align="center"
-                sideOffset={5}
-              >
-                <div className="space-y-1">
-                  <h4 className="font-medium">{point.name} ({point.index})</h4>
-                  <p className="text-sm text-gray-500">{point.description}</p>
-                  <div className="text-xs text-gray-400">
-                    Day: {point.day} • Energy: {point.energy}
+            <TooltipProvider>
+              <Tooltip delayDuration={0}>
+                <TooltipTrigger asChild>
+                  <div 
+                    className="h-[12px] w-[12px] rounded-full bg-[#9b87f5] border-2 border-white cursor-pointer"
+                    style={{ touchAction: 'none' }}
+                  />
+                </TooltipTrigger>
+                <TooltipContent 
+                  className="w-64 p-3 bg-white shadow-lg border border-gray-200" 
+                  side="top"
+                  align="center"
+                  sideOffset={5}
+                >
+                  <div className="space-y-1">
+                    <h4 className="font-medium">{point.name} ({point.index})</h4>
+                    <p className="text-sm text-gray-500">{point.description}</p>
+                    <div className="text-xs text-gray-400">
+                      Day: {point.day} • Energy: {point.energy}
+                    </div>
                   </div>
-                </div>
-              </HoverCardContent>
-            </HoverCard>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           </div>
         </foreignObject>
       </g>
