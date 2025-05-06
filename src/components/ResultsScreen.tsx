@@ -6,11 +6,64 @@ import { QuizResults } from "@/utils/quizData";
 import { ArrowRight } from "lucide-react";
 import EnergyGraphPoints from "@/components/EnergyGraphPoints";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface ResultsScreenProps {
   results: QuizResults;
   onReset: () => void;
 }
+
+// Helper function to convert form values to user-friendly text
+const formatResultValue = (key: string, value: string): string => {
+  if (!value) return "Not specified";
+  
+  // Map the internal values back to the display values from the quiz questions
+  switch (key) {
+    case "cycleLength":
+      switch (value) {
+        case "less28days": return "Less than 28 days";
+        case "28to32days": return "28–32 days";
+        case "more32days": return "More than 32 days";
+        case "inconsistent": return "Inconsistent";
+        case "unknown": return "I don't know";
+        default: return value;
+      }
+    case "periodLength":
+      switch (value) {
+        case "1-2days": return "1–2 days";
+        case "3-5days": return "3–5 days";
+        case "6-7days": return "6–7 days";
+        case "longer": return "Longer / varies";
+        default: return value;
+      }
+    case "peakEnergy":
+      switch (value) {
+        case "afterPeriod": return "Just after my period";
+        case "ovulation": return "Around ovulation";
+        case "inconsistent": return "Hard to say";
+        default: return value;
+      }
+    case "lowestEnergy":
+      switch (value) {
+        case "prePeriod": return "Just before my period (PMS)";
+        case "duringPeriod": return "During my period";
+        case "postOvulation": return "Week after ovulation";
+        case "varies": return "It varies";
+        default: return value;
+      }
+    case "condition":
+      switch (value) {
+        case "pcod": return "PCOD";
+        case "pcos": return "PCOS";
+        case "thyroid": return "Thyroid";
+        case "menopause": return "Menopause / Peri-menopause";
+        case "none": return "None";
+        default: return value;
+      }
+    default:
+      return value;
+  }
+};
 
 const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
   const isMobile = useIsMobile();
@@ -45,24 +98,24 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-1">
             <p className="text-sm text-gray-500">Cycle Length</p>
-            <p className="font-medium">{results.cycleLength || "Not specified"}</p>
+            <p className="font-medium">{formatResultValue("cycleLength", results.cycleLength)}</p>
           </div>
           <div className="space-y-1">
             <p className="text-sm text-gray-500">Period Duration</p>
-            <p className="font-medium">{results.periodLength || "Not specified"}</p>
+            <p className="font-medium">{formatResultValue("periodLength", results.periodLength)}</p>
           </div>
           <div className="space-y-1">
             <p className="text-sm text-gray-500">Peak Energy Phase</p>
-            <p className="font-medium">{results.peakEnergy || "Not specified"}</p>
+            <p className="font-medium">{formatResultValue("peakEnergy", results.peakEnergy)}</p>
           </div>
           <div className="space-y-1">
             <p className="text-sm text-gray-500">Low Energy Phase</p>
-            <p className="font-medium">{results.lowestEnergy || "Not specified"}</p>
+            <p className="font-medium">{formatResultValue("lowestEnergy", results.lowestEnergy)}</p>
           </div>
           {results.condition && results.condition !== "none" && (
             <div className="col-span-full space-y-1">
               <p className="text-sm text-gray-500">Health Conditions</p>
-              <p className="font-medium">{results.condition}</p>
+              <p className="font-medium">{formatResultValue("condition", results.condition)}</p>
             </div>
           )}
         </div>
@@ -88,12 +141,12 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
         </div>
       </div>
       
-      {/* CTA Section with avatar */}
+      {/* CTA Section with avatar - updated with Ketaki's photo */}
       <div className="bg-gradient-to-r from-rhythm-accent2/10 to-purple-200/20 p-4 md:p-6 rounded-lg">
         <div className="flex flex-col md:flex-row items-center gap-4">
           <Avatar className="w-16 h-16 border-2 border-white">
-            <AvatarImage src="/placeholder.svg" alt="Coach" />
-            <AvatarFallback>RB</AvatarFallback>
+            <AvatarImage src="/lovable-uploads/48c83989-71f5-42a5-84b0-a9da7e9c0d59.png" alt="Coach Ketaki" />
+            <AvatarFallback>KT</AvatarFallback>
           </Avatar>
           <div className="flex-1 text-center md:text-left">
             <h3 className="text-lg font-medium">Want to learn more about your cycle?</h3>
@@ -124,8 +177,5 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
     </div>
   );
 };
-
-// Add missing import for cn utility
-import { cn } from "@/lib/utils";
 
 export default ResultsScreen;

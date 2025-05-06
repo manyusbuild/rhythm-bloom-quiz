@@ -159,33 +159,37 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     return labels;
   };
   
-  // Render SVG point with hover card
+  // Render SVG point with hover card - Fixed tooltip functionality
   const renderPoint = (point: typeof points[0]) => {
     const x = xScale(point.day);
     const y = yScale(point.energy);
     
     return (
-      <HoverCard key={`point-${point.index}`}>
-        <HoverCardTrigger asChild>
-          <g className="cursor-pointer" transform={`translate(${x}, ${y})`}>
+      <g key={`point-${point.index}`}>
+        <HoverCard>
+          <HoverCardTrigger asChild>
             <circle 
+              cx={x}
+              cy={y}
               r={6} 
               fill="#9b87f5"
               stroke="white"
               strokeWidth={2}
+              className="cursor-pointer"
+              style={{ pointerEvents: 'all' }}
             />
-          </g>
-        </HoverCardTrigger>
-        <HoverCardContent className="w-64 p-3">
-          <div className="space-y-1">
-            <h4 className="font-medium">{point.name} ({point.index})</h4>
-            <p className="text-sm text-gray-500">{point.description}</p>
-            <div className="text-xs text-gray-400">
-              Day: {point.day} • Energy: {point.energy}
+          </HoverCardTrigger>
+          <HoverCardContent className="w-64 p-3">
+            <div className="space-y-1">
+              <h4 className="font-medium">{point.name} ({point.index})</h4>
+              <p className="text-sm text-gray-500">{point.description}</p>
+              <div className="text-xs text-gray-400">
+                Day: {point.day} • Energy: {point.energy}
+              </div>
             </div>
-          </div>
-        </HoverCardContent>
-      </HoverCard>
+          </HoverCardContent>
+        </HoverCard>
+      </g>
     );
   };
   
@@ -245,25 +249,13 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
         {generateXAxisLabels()}
         {generateYAxisLabels()}
         
-        {/* Graph title */}
-        <text 
-          x={width / 2} 
-          y={20} 
-          textAnchor="middle"
-          fontSize="14"
-          fontWeight="bold"
-          fill="#1e293b"
-        >
-          Your Energy Cycle Points
-        </text>
-        
-        {/* Chart points - excluding ovulation point */}
+        {/* Chart points */}
         {points.map(renderPoint)}
       </svg>
       
       {/* Empty legend container - keeping the structure for future use */}
       <div className="mt-4 flex justify-center flex-wrap gap-4 text-xs text-gray-500">
-        {/* Legend content removed as requested */}
+        {/* Legend content removed as previously requested */}
       </div>
     </div>
   );
