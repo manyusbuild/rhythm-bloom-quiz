@@ -41,7 +41,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   // Calculate key points
   const points = [
     { index: 1, name: "Cycle Start", day: 1, energy: 1, description: "Day 1 - Beginning of your period" },
-    { index: 2, name: "Period End", day: chartData.periodEndDay, energy: 2.5, description: "End of your menstrual flow" },
+    { index: 2, name: "Period End", day: chartData.periodEndDay, energy: 3, description: "End of your menstrual flow" }, // Updated energy to 3
     { index: 3, name: "Peak Energy", day: chartData.peakDay, energy: 5, description: "Your highest energy point" },
     { index: 4, name: "Lowest Energy", day: chartData.lowestDay, energy: 1, description: "Your lowest energy point" },
     { index: 5, name: "Cycle End", day: chartData.cycleLength, energy: 1, description: `Day ${chartData.cycleLength} - End of your cycle` }
@@ -161,7 +161,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
   };
   
   // Generate cardinal spline paths
-  const generateCardinalSpline = (points: typeof points[0][], tension: number, color: string) => {
+  const generateCardinalSpline = (points: typeof points, tension: number, color: string) => {
     if (points.length < 2) return null;
     
     // Sort points by day to ensure proper ordering
@@ -194,6 +194,56 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
       <path 
         d={path} 
         stroke={color} 
+        strokeWidth={1.5} 
+        fill="none" 
+        strokeLinecap="round"
+      />
+    );
+  };
+  
+  // Generate cubic Bézier curve (two segments)
+  const generateCubicBezier = () => {
+    if (points.length < 5) return null;
+    
+    // Get sorted points by index to ensure correct order
+    const sortedPoints = [...points].sort((a, b) => a.index - b.index);
+    
+    // Extract the key points with meaningful names
+    const P = { x: xScale(sortedPoints[0].day), y: yScale(sortedPoints[0].energy) }; // Cycle Start
+    const Q = { x: xScale(sortedPoints[1].day), y: yScale(sortedPoints[1].energy) }; // Period End
+    const R = { x: xScale(sortedPoints[2].day), y: yScale(sortedPoints[2].energy) }; // Peak Energy
+    const S = { x: xScale(sortedPoints[3].day), y: yScale(sortedPoints[3].energy) }; // Lowest Energy
+    const T = { x: xScale(sortedPoints[4].day), y: yScale(sortedPoints[4].energy) }; // Cycle End
+    
+    // Calculate control points for first Bézier segment (P to R)
+    // P's outgoing control point: horizontal length equal to distance from P to Q
+    const cp1x = P.x + (Q.x - P.x);
+    const cp1y = P.y; // Same y-level as P for flat tangent
+    
+    // R's incoming control point: horizontal length equal to distance from Q to R
+    const cp2x = R.x - (R.x - Q.x);
+    const cp2y = R.y; // Same y-level as R for flat tangent
+    
+    // Calculate control points for second Bézier segment (R to T)
+    // R's outgoing control point: horizontal length equal to half the distance from R to S
+    const cp3x = R.x + (S.x - R.x) / 2;
+    const cp3y = R.y; // Same y-level as R for flat tangent
+    
+    // T's incoming control point: horizontal length equal to twice the distance from S to T
+    const cp4x = T.x - (T.x - S.x) * 2;
+    const cp4y = T.y; // Same y-level as T for flat tangent
+    
+    // Build the path
+    const bezierPath = `
+      M ${P.x},${P.y}
+      C ${cp1x},${cp1y} ${cp2x},${cp2y} ${R.x},${R.y}
+      C ${cp3x},${cp3y} ${cp4x},${cp4y} ${T.x},${T.y}
+    `;
+    
+    return (
+      <path 
+        d={bezierPath} 
+        stroke="green" 
         strokeWidth={1.5} 
         fill="none" 
         strokeLinecap="round"
@@ -297,6 +347,9 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
         {/* Experimental Cardinal Splines */}
         {generateCardinalSpline(points, 0.5, 'red')}
         {generateCardinalSpline(points, 1, 'blue')}
+        
+        {/* New Cubic Bézier Curve */}
+        {generateCubicBezier()}
         
         {/* Chart points with tooltips - these must be rendered LAST to be on top */}
         {points.map(renderPoint)}
