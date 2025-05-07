@@ -70,9 +70,9 @@ const chartConfig = {
   
   // Lowest energy day mappings
   lowestEnergy: {
-    "prePeriod": { daysFromEnd: 3, fuzzy: false },
-    "duringPeriod": { daysFromStart: 1, fuzzy: false },
-    "postOvulation": { daysFromEnd: 7, fuzzy: false },
+    "prePeriod": { daysFromEnd: 5, fuzzy: false },
+    "duringPeriod": { daysFromEnd: 3, fuzzy: false },
+    "postOvulation": { daysFromEnd: 10, fuzzy: false },
     "varies": { daysFromEnd: 7, fuzzy: true }
   },
   
