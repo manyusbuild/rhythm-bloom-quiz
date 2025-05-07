@@ -1,4 +1,3 @@
-
 import { QuizResults } from "./quizData";
 
 interface ChartPoint {
@@ -13,7 +12,6 @@ interface BezierPoint {
 
 interface ChartData {
   points: ChartPoint[];
-  bezierPoints: BezierPoint[];
   cycleLength: number;
   peakDay: number;
   lowestDay: number;
@@ -71,7 +69,7 @@ const chartConfig = {
   // Lowest energy day mappings
   lowestEnergy: {
     "prePeriod": { daysFromEnd: 5, fuzzy: false },
-    "duringPeriod": { daysFromEnd: 3, fuzzy: false },
+    "duringPeriod": { daysFromStart: 3, fuzzy: false },
     "postOvulation": { daysFromEnd: 10, fuzzy: false },
     "varies": { daysFromEnd: 7, fuzzy: true }
   },
@@ -156,36 +154,26 @@ export const generateChartData = (results: QuizResults): ChartData => {
   // Set dip fuzziness flag
   fuzziness.dip = lowestEnergyConfig.fuzzy;
 
-  // Define the three key points as requested
-  const keyPoints = [
-    { day: startDay, energy: 1 },    // Start point: day 1, low energy
-    { day: peakDay, energy: 5 },     // Peak energy point
-    { day: endDay, energy: 1 }       // End point: cycle end, low energy
-  ];
-
-  // Define control points
-  const controlPoints = [
-    { day: periodEndDay, energy: 2.5 },  // End of period, moderate energy
-    { day: Math.floor(cycleLength / 2), energy: 4 }  // Ovulation, high-ish energy
-  ];
-
-  // Generate Bezier curve using the key points and control points
-  const bezierPoints = generateSimplifiedBezierCurve(keyPoints, controlPoints, cycleLength);
-
-  // Generate data points for the full curve (for display and markers)
+  // Generate points array with basic energy values
   const points: ChartPoint[] = [];
   for (let day = 1; day <= cycleLength; day++) {
-    // Find the closest bezier point for this day
-    const closest = bezierPoints.reduce((prev, curr) => {
-      const prevDiff = Math.abs((prev.x * (cycleLength-1) + 1) - day);
-      const currDiff = Math.abs((curr.x * (cycleLength-1) + 1) - day);
-      return prevDiff < currDiff ? prev : curr;
-    });
+    // Simple linear interpolation between key points
+    let energy = 1; // Default low energy
     
-    points.push({ 
-      day, 
-      energy: closest.y * 5 // Scale to 1-5 range
-    });
+    // Determine energy based on position in cycle
+    if (day === peakDay) {
+      energy = 5; // Peak energy
+    } else if (day === lowestDay) {
+      energy = 1; // Lowest energy
+    } else if (day === periodEndDay) {
+      energy = 2.5; // End of period - moderate energy
+    } else if (day === 1) {
+      energy = 1; // Start of cycle - low energy
+    } else if (day === cycleLength) {
+      energy = 1; // End of cycle - low energy
+    }
+    
+    points.push({ day, energy });
   }
 
   // Calculate phase estimates
@@ -199,11 +187,10 @@ export const generateChartData = (results: QuizResults): ChartData => {
 
   return {
     points,
-    bezierPoints,
     cycleLength,
     peakDay,
     lowestDay,
-    periodEndDay, // Added for EnergyGraphPoints
+    periodEndDay,
     peakMessage,
     lowMessage,
     phases: {
@@ -214,81 +201,6 @@ export const generateChartData = (results: QuizResults): ChartData => {
     fuzziness,
     displayCycleLengthLabel,
     conditionMessage: conditionConfig.message
-  };
-};
-
-// Generate a simplified bezier curve with 3 key points and 2 control points
-const generateSimplifiedBezierCurve = (
-  keyPoints: ChartPoint[], 
-  controlPoints: ChartPoint[], 
-  cycleLength: number
-): BezierPoint[] => {
-  const bezierPoints: BezierPoint[] = [];
-  const numPoints = 100; // Number of points to generate along the curve
-  
-  // Scale points to 0-1 range for x (day) and y (energy) values
-  const scaledKeyPoints = keyPoints.map(point => ({
-    x: (point.day - 1) / (cycleLength - 1),
-    y: (point.energy - 1) / 4  // Scale 1-5 to 0-1
-  }));
-  
-  const scaledControlPoints = controlPoints.map(point => ({
-    x: (point.day - 1) / (cycleLength - 1),
-    y: (point.energy - 1) / 4  // Scale 1-5 to 0-1
-  }));
-  
-  // We'll create a composite bezier curve with two cubic bezier segments:
-  // 1. From start to peak: P0(start), C1(controlPoint1), C2(calculated), P3(peak)
-  // 2. From peak to end: P0(peak), C1(calculated), C2(controlPoint2), P3(end)
-  
-  // First segment: Start to Peak
-  for (let t = 0; t <= 1; t += 1/numPoints) {
-    const p0 = scaledKeyPoints[0]; // Start point
-    const p3 = scaledKeyPoints[1]; // Peak point
-    const c1 = scaledControlPoints[0]; // First control point
-    
-    // Calculate the second control point to ensure smooth transition at the peak
-    const c2 = {
-      x: p3.x - (p3.x - c1.x) * 0.5,
-      y: p3.y
-    };
-    
-    // Calculate point on cubic bezier curve
-    const point = cubicBezier(t, p0, c1, c2, p3);
-    bezierPoints.push(point);
-  }
-  
-  // Second segment: Peak to End
-  for (let t = 0; t <= 1; t += 1/numPoints) {
-    const p0 = scaledKeyPoints[1]; // Peak point
-    const p3 = scaledKeyPoints[2]; // End point
-    const c2 = scaledControlPoints[1]; // Second control point
-    
-    // Calculate the first control point to ensure smooth transition at the peak
-    const c1 = {
-      x: p0.x + (c2.x - p0.x) * 0.5,
-      y: p0.y
-    };
-    
-    // Calculate point on cubic bezier curve
-    const point = cubicBezier(t, p0, c1, c2, p3);
-    bezierPoints.push(point);
-  }
-  
-  return bezierPoints;
-};
-
-// Calculate a point on a cubic bezier curve
-const cubicBezier = (t: number, p0: BezierPoint, p1: BezierPoint, p2: BezierPoint, p3: BezierPoint): BezierPoint => {
-  const mt = 1 - t;
-  const mt2 = mt * mt;
-  const mt3 = mt2 * mt;
-  const t2 = t * t;
-  const t3 = t2 * t;
-  
-  return {
-    x: mt3 * p0.x + 3 * mt2 * t * p1.x + 3 * mt * t2 * p2.x + t3 * p3.x,
-    y: mt3 * p0.y + 3 * mt2 * t * p1.y + 3 * mt * t2 * p2.y + t3 * p3.y,
   };
 };
 
