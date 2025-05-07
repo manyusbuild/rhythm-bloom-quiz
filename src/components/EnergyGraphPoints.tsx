@@ -270,7 +270,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     );
   };
   
-  // Generate the red gradient area above the curve (between energy 1 and 3)
+  // Generate the red gradient area above the curve (between energy 1 and 5)
   const generateRedGradientArea = () => {
     if (points.length < 5) return null;
     
@@ -297,11 +297,11 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     const cp4x = T.x - (T.x - S.x) * 2;
     const cp4y = T.y;
     
-    // Calculate top line y-value for energy level 3
-    const topY = yScale(3);
+    // Calculate top line y-value for energy level 5
+    const topY = yScale(5);
     
     // Build the path
-    // Start at y=3 for first point's x, go down to curve, follow curve, then up to y=3 for last point's x, and back
+    // Start at y=5 for first point's x, go down to curve, follow curve, then up to y=5 for last point's x, and back
     const areaPath = `
       M ${P.x},${topY}
       L ${P.x},${P.y}
@@ -381,7 +381,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
             <stop offset="100%" stopColor="#D4C7F4" stopOpacity="0" />
           </linearGradient>
           <linearGradient id="redGradient" x1="0%" y1="100%" x2="0%" y2="0%">
-            <stop offset="0%" stopColor="#FF7672" stopOpacity="0.7" />
+            <stop offset="0%" stopColor="#FF7672" stopOpacity="0.5" />
             <stop offset="100%" stopColor="#FF7672" stopOpacity="0" />
           </linearGradient>
         </defs>
