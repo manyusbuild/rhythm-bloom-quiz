@@ -1,10 +1,10 @@
 import React from 'react';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { QuizResults } from "@/utils/quizData";
 import { generateChartData } from "@/utils/chartGenerator";
 import { Info } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { HoverCard, HoverCardContent, HoverCardTrigger } from "@/components/ui/hover-card";
 
 interface EnergyGraphPointsProps {
   results: QuizResults;
@@ -168,6 +168,47 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     return labels;
   };
   
+  // Generate cardinal spline paths
+  const generateCardinalSpline = (points: ChartPoint[], tension: number, color: string) => {
+    if (points.length < 2) return null;
+    
+    // Sort points by day to ensure proper ordering
+    const sortedPoints = [...points].sort((a, b) => a.day - b.day);
+    
+    const pointCoords = sortedPoints.map(point => ({
+      x: xScale(point.day),
+      y: yScale(point.energy)
+    }));
+    
+    // Cardinal spline implementation
+    let path = `M ${pointCoords[0].x},${pointCoords[0].y}`;
+    
+    for (let i = 0; i < pointCoords.length - 1; i++) {
+      const p0 = i > 0 ? pointCoords[i - 1] : pointCoords[i];
+      const p1 = pointCoords[i];
+      const p2 = pointCoords[i + 1];
+      const p3 = i < pointCoords.length - 2 ? pointCoords[i + 2] : p2;
+      
+      // Calculate control points
+      const cp1x = p1.x + (p2.x - p0.x) * tension / 6;
+      const cp1y = p1.y + (p2.y - p0.y) * tension / 6;
+      const cp2x = p2.x - (p3.x - p1.x) * tension / 6;
+      const cp2y = p2.y - (p3.y - p1.y) * tension / 6;
+      
+      path += ` C ${cp1x},${cp1y} ${cp2x},${cp2y} ${p2.x},${p2.y}`;
+    }
+    
+    return (
+      <path 
+        d={path} 
+        stroke={color} 
+        strokeWidth={1.5} 
+        fill="none" 
+        strokeLinecap="round"
+      />
+    );
+  };
+  
   // Generate cubic Bézier curve (two segments)
   const generateCubicBezier = () => {
     if (points.length < 5) return null;
@@ -196,13 +237,8 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     const cp3x = R.x + (S.x - R.x) / 2;
     const cp3y = R.y; // Same y-level as R for flat tangent
     
-    // T's incoming control point: Calculate a minimum handle length of 5 days
-    // Use max((T.x - S.x), 5 days in x-scale units) * 2
-    const minHandleLength = 5 * (innerWidth / (chartData.cycleLength - 1)); // 5 days in x-scale units
-    const xDistance = T.x - S.x;
-    const handleLength = Math.max(xDistance, minHandleLength) * 2;
-    
-    const cp4x = T.x - handleLength;
+    // T's incoming control point: horizontal length equal to twice the distance from S to T
+    const cp4x = T.x - (T.x - S.x) * 2;
     const cp4y = T.y; // Same y-level as T for flat tangent
     
     // Build the path
@@ -223,19 +259,39 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     );
   };
   
-  // Render basic SVG point without hover functionality
+  // Render SVG point with hover card - Fixed tooltip functionality
   const renderPoint = (point: ChartPoint) => {
     const x = xScale(point.day);
     const y = yScale(point.energy);
     
     return (
-      <g key={`point-${point.index}`}>
-        <circle
-          cx={x}
-          cy={y}
-          r={6}
-          className="fill-[#9b87f5] stroke-2 stroke-white"
-        />
+      <g key={`point-${point.index}`} className="cursor-pointer">
+        <foreignObject
+          x={x - 6}
+          y={y - 6}
+          width={12}
+          height={12}
+        >
+          <div className="h-full w-full flex items-center justify-center">
+            <HoverCard>
+              <HoverCardTrigger asChild>
+                <div 
+                  className="h-[12px] w-[12px] rounded-full bg-[#9b87f5] border-2 border-white cursor-pointer"
+                  style={{ touchAction: 'none' }}
+                />
+              </HoverCardTrigger>
+              <HoverCardContent className="w-64 p-3">
+                <div className="space-y-1">
+                  <h4 className="font-medium">{point.name} ({point.index})</h4>
+                  <p className="text-sm text-gray-500">{point.description}</p>
+                  <div className="text-xs text-gray-400">
+                    Day: {point.day} • Energy: {point.energy}
+                  </div>
+                </div>
+              </HoverCardContent>
+            </HoverCard>
+          </div>
+        </foreignObject>
       </g>
     );
   };
@@ -296,10 +352,14 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
         {generateXAxisLabels()}
         {generateYAxisLabels()}
         
-        {/* Cubic Bézier Curve */}
+        {/* Experimental Cardinal Splines */}
+        {generateCardinalSpline(points, 0.5, 'red')}
+        {generateCardinalSpline(points, 1, 'blue')}
+        
+        {/* New Cubic Bézier Curve */}
         {generateCubicBezier()}
         
-        {/* Chart points without tooltips */}
+        {/* Chart points with tooltips - these must be rendered LAST to be on top */}
         {points.map(renderPoint)}
       </svg>
       
