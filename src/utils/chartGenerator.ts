@@ -1,4 +1,3 @@
-
 import { QuizResults } from "./quizData";
 
 interface ChartPoint {
@@ -145,7 +144,7 @@ export const generateChartData = (results: QuizResults): ChartData => {
   const lowestEnergyConfig = chartConfig.lowestEnergy[results.lowestEnergy as keyof typeof chartConfig.lowestEnergy] || 
     chartConfig.lowestEnergy.prePeriod;
   
-  if ('daysFromEnd' in lowestEnergyConfig) {
+  if (lowestEnergyConfig && 'daysFromEnd' in lowestEnergyConfig) {
     lowestDay = cycleLength - lowestEnergyConfig.daysFromEnd;
   } else {
     lowestDay = cycleLength - 3; // Default to 3 days before end

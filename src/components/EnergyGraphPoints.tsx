@@ -168,7 +168,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     return labels;
   };
   
-  // Generate cubic Bézier curve (two segments)
+  // Generate cubic Bézier curve
   const generateCubicBezier = () => {
     if (points.length < 5) return null;
     
@@ -210,16 +210,124 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     return (
       <path 
         d={bezierPath} 
-        stroke="green" 
-        strokeWidth={1.5} 
+        stroke="#FD8687" 
+        strokeWidth={2} 
         fill="none" 
         strokeLinecap="round"
       />
     );
   };
   
+  // Generate the purple gradient area below the curve
+  const generatePurpleGradientArea = () => {
+    if (points.length < 5) return null;
+    
+    // Get sorted points by index to ensure correct order
+    const sortedPoints = [...points].sort((a, b) => a.index - b.index);
+    
+    // Extract the key points
+    const P = { x: xScale(sortedPoints[0].day), y: yScale(sortedPoints[0].energy) }; // Cycle Start
+    const Q = { x: xScale(sortedPoints[1].day), y: yScale(sortedPoints[1].energy) }; // Period End
+    const R = { x: xScale(sortedPoints[2].day), y: yScale(sortedPoints[2].energy) }; // Peak Energy
+    const S = { x: xScale(sortedPoints[3].day), y: yScale(sortedPoints[3].energy) }; // Lowest Energy
+    const T = { x: xScale(sortedPoints[4].day), y: yScale(sortedPoints[4].energy) }; // Cycle End
+    
+    // Calculate control points for first Bézier segment (P to R)
+    const cp1x = P.x + (Q.x - P.x);
+    const cp1y = P.y;
+    
+    const cp2x = R.x - (R.x - Q.x);
+    const cp2y = R.y;
+    
+    // Calculate control points for second Bézier segment (R to T)
+    const cp3x = R.x + (S.x - R.x) / 2;
+    const cp3y = R.y;
+    
+    const cp4x = T.x - (T.x - S.x) * 2;
+    const cp4y = T.y;
+    
+    // Calculate baseline y-value for energy level 1
+    const baselineY = yScale(1);
+    
+    // Build the path
+    // Start at first point, follow bezier curve, go down to baseline, then back to start
+    const areaPath = `
+      M ${P.x},${P.y}
+      C ${cp1x},${cp1y} ${cp2x},${cp2y} ${R.x},${R.y}
+      C ${cp3x},${cp3y} ${cp4x},${cp4y} ${T.x},${T.y}
+      L ${T.x},${baselineY}
+      L ${P.x},${baselineY}
+      Z
+    `;
+    
+    return (
+      <path 
+        d={areaPath} 
+        fill="url(#purpleGradient)" 
+        stroke="none"
+        opacity={0.7}
+      />
+    );
+  };
+  
+  // Generate the red gradient area above the curve (between energy 1 and 3)
+  const generateRedGradientArea = () => {
+    if (points.length < 5) return null;
+    
+    // Get sorted points by index to ensure correct order
+    const sortedPoints = [...points].sort((a, b) => a.index - b.index);
+    
+    // Extract the key points
+    const P = { x: xScale(sortedPoints[0].day), y: yScale(sortedPoints[0].energy) }; // Cycle Start
+    const Q = { x: xScale(sortedPoints[1].day), y: yScale(sortedPoints[1].energy) }; // Period End
+    const R = { x: xScale(sortedPoints[2].day), y: yScale(sortedPoints[2].energy) }; // Peak Energy
+    const S = { x: xScale(sortedPoints[3].day), y: yScale(sortedPoints[3].energy) }; // Lowest Energy
+    const T = { x: xScale(sortedPoints[4].day), y: yScale(sortedPoints[4].energy) }; // Cycle End
+    
+    // Calculate control points for the bezier curves
+    const cp1x = P.x + (Q.x - P.x);
+    const cp1y = P.y;
+    
+    const cp2x = R.x - (R.x - Q.x);
+    const cp2y = R.y;
+    
+    const cp3x = R.x + (S.x - R.x) / 2;
+    const cp3y = R.y;
+    
+    const cp4x = T.x - (T.x - S.x) * 2;
+    const cp4y = T.y;
+    
+    // Calculate top line y-value for energy level 3
+    const topY = yScale(3);
+    
+    // Build the path
+    // Start at y=3 for first point's x, go down to curve, follow curve, then up to y=3 for last point's x, and back
+    const areaPath = `
+      M ${P.x},${topY}
+      L ${P.x},${P.y}
+      C ${cp1x},${cp1y} ${cp2x},${cp2y} ${R.x},${R.y}
+      C ${cp3x},${cp3y} ${cp4x},${cp4y} ${T.x},${T.y}
+      L ${T.x},${topY}
+      Z
+    `;
+    
+    return (
+      <path 
+        d={areaPath} 
+        fill="url(#redGradient)" 
+        stroke="none"
+        opacity={0.7}
+      />
+    );
+  };
+  
   // Render SVG point without hover card functionality
   const renderPoint = (point: ChartPoint) => {
+    // Only render points with index 1 (Cycle Start), 3 (Peak Energy), and 5 (Cycle End)
+    if (point.index !== 1 && point.index !== 3 && point.index !== 5) {
+      return null;
+    }
+    
     const x = xScale(point.day);
     const y = yScale(point.energy);
     
@@ -266,6 +374,18 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
         preserveAspectRatio="xMidYMid meet"
         className="overflow-visible"
       >
+        {/* Define gradients */}
+        <defs>
+          <linearGradient id="purpleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#D4C7F4" stopOpacity="1" />
+            <stop offset="100%" stopColor="#D4C7F4" stopOpacity="0" />
+          </linearGradient>
+          <linearGradient id="redGradient" x1="0%" y1="100%" x2="0%" y2="0%">
+            <stop offset="0%" stopColor="#FF7672" stopOpacity="0.7" />
+            <stop offset="100%" stopColor="#FF7672" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        
         {/* Grid lines */}
         {generateGridLines()}
         
@@ -291,7 +411,11 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
         {generateXAxisLabels()}
         {generateYAxisLabels()}
         
-        {/* New Cubic Bézier Curve */}
+        {/* Gradient areas - render these before the curve */}
+        {generatePurpleGradientArea()}
+        {generateRedGradientArea()}
+        
+        {/* Bezier Curve */}
         {generateCubicBezier()}
         
         {/* Chart points without tooltips */}
