@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { QuizResults } from "@/utils/quizData";
 import { generateChartData } from "@/utils/chartGenerator";
@@ -16,7 +15,6 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   const chartData = generateChartData(results);
   const { 
     points, 
-    bezierPoints, 
     cycleLength, 
     peakDay, 
     lowestDay, 
@@ -34,35 +32,35 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   const innerWidth = width - (padding * 2);
   const innerHeight = height - (padding * 2);
   
-  // Scale the bezier points to fit the SVG
-  const scaledBezierPoints = bezierPoints.map(point => ({
-    x: padding + point.x * innerWidth,
-    y: padding + innerHeight - (point.y * innerHeight)
-  }));
-  
   // Scale the data points for markers
   const scaledPoints = points.map(point => ({
     x: padding + (point.day - 1) * (innerWidth / (cycleLength - 1)),
     y: padding + innerHeight - ((point.energy - 1) / 4) * innerHeight
   }));
   
-  // Generate SVG path for bezier curve
-  const bezierPath = `M ${scaledBezierPoints.map(p => `${p.x},${p.y}`).join(' L ')}`;
+  // Generate SVG path for the energy curve using points
+  const bezierPath = `M ${points.map(p => `${padding + (p.day - 1) * (innerWidth / (cycleLength - 1))},${padding + innerHeight - ((p.energy - 1) / 4) * innerHeight}`).join(' L ')}`;
   
   // Generate area path for the gradient fill
   const areaPath = `
-    M ${scaledBezierPoints[0].x},${padding + innerHeight}
-    L ${scaledBezierPoints.map(p => `${p.x},${p.y}`).join(' ')}
-    L ${scaledBezierPoints[scaledBezierPoints.length - 1].x},${padding + innerHeight}
+    M ${padding},${padding + innerHeight}
+    L ${points.map(p => `${padding + (p.day - 1) * (innerWidth / (cycleLength - 1))},${padding + innerHeight - ((p.energy - 1) / 4) * innerHeight}`).join(' ')}
+    L ${padding + innerWidth},${padding + innerHeight}
     Z
   `;
   
   // Calculate key points for developer mode
   const peakPointIndex = points.findIndex(p => p.day === peakDay);
-  const peakPoint = scaledPoints[peakPointIndex] || scaledPoints[Math.floor(scaledPoints.length / 2)];
+  const peakPoint = {
+    x: padding + (peakDay - 1) * (innerWidth / (cycleLength - 1)),
+    y: padding + innerHeight - ((points[peakPointIndex]?.energy || 5) - 1) / 4 * innerHeight
+  };
   
   const lowPointIndex = points.findIndex(p => p.day === lowestDay);
-  const lowPoint = scaledPoints[lowPointIndex] || scaledPoints[scaledPoints.length - 2];
+  const lowPoint = {
+    x: padding + (lowestDay - 1) * (innerWidth / (cycleLength - 1)),
+    y: padding + innerHeight - ((points[lowPointIndex]?.energy || 1) - 1) / 4 * innerHeight
+  };
   
   // Energy scale labels (descriptive text)
   const energyLabels = [
@@ -179,16 +177,16 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               <g className="developer-markers">
                 {/* Start point marker */}
                 <circle 
-                  cx={scaledBezierPoints[0].x} 
-                  cy={scaledBezierPoints[0].y} 
+                  cx={scaledPoints[0].x} 
+                  cy={scaledPoints[0].y} 
                   r="5" 
                   fill="#333"
                   stroke="#fff" 
                   strokeWidth="1"
                 />
                 <text 
-                  x={scaledBezierPoints[0].x} 
-                  y={scaledBezierPoints[0].y - 10} 
+                  x={scaledPoints[0].x} 
+                  y={scaledPoints[0].y - 10} 
                   fontSize="10" 
                   fill="#333" 
                   textAnchor="middle"
@@ -236,38 +234,22 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
                 
                 {/* End point marker */}
                 <circle 
-                  cx={scaledBezierPoints[scaledBezierPoints.length - 1].x} 
-                  cy={scaledBezierPoints[scaledBezierPoints.length - 1].y} 
+                  cx={scaledPoints[scaledPoints.length - 1].x} 
+                  cy={scaledPoints[scaledPoints.length - 1].y} 
                   r="5" 
                   fill="#333"
                   stroke="#fff" 
                   strokeWidth="1"
                 />
                 <text 
-                  x={scaledBezierPoints[scaledBezierPoints.length - 1].x} 
-                  y={scaledBezierPoints[scaledBezierPoints.length - 1].y - 10} 
+                  x={scaledPoints[scaledPoints.length - 1].x} 
+                  y={scaledPoints[scaledPoints.length - 1].y - 10} 
                   fontSize="10" 
                   fill="#333" 
                   textAnchor="middle"
                 >
                   End: Day {cycleLength}
                 </text>
-                
-                {/* Control points markers (for Bezier curve visualization) */}
-                {bezierPoints.map((point, i) => (
-                  i % 10 === 0 && i > 0 && i < bezierPoints.length - 1 && (
-                    <circle 
-                      key={`ctrl-${i}`}
-                      cx={point.x} 
-                      cy={point.y} 
-                      r="3" 
-                      fill="none"
-                      stroke="#666" 
-                      strokeWidth="1"
-                      strokeDasharray="2,2"
-                    />
-                  )
-                ))}
               </g>
             )}
             
@@ -358,4 +340,3 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
 };
 
 export default EnergyChart;
-
