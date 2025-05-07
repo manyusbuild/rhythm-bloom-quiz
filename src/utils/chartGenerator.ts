@@ -147,8 +147,6 @@ export const generateChartData = (results: QuizResults): ChartData => {
   
   if ('daysFromEnd' in lowestEnergyConfig) {
     lowestDay = cycleLength - lowestEnergyConfig.daysFromEnd;
-  } else if ('daysFromStart' in lowestEnergyConfig) {
-    lowestDay = lowestEnergyConfig.daysFromStart;
   } else {
     lowestDay = cycleLength - 3; // Default to 3 days before end
   }
