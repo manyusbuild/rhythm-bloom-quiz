@@ -54,13 +54,13 @@ const chartConfig = {
     "1-2days": { endDay: 3, fuzzy: false },
     "3-5days": { endDay: 5, fuzzy: false },
     "6-7days": { endDay: 7, fuzzy: false },
-    "longer": { endDay: 9, fuzzy: true }
+    "longer": { endDay: 7, fuzzy: true } // changed from 9 to 7 - Manyu
   },
   
   // Peak energy day mappings
   peakEnergy: {
     // For "afterPeriod", we'll add logic to calculate based on periodEndDay + 2
-    "afterPeriod": { dayOffset: 2, fuzzy: false },
+    "afterPeriod": { dayOffset: 4, fuzzy: false }, // changed from 2 to 4 - Manyu
     // For "ovulation", we'll calculate as cycleLength/2
     "ovulation": { dayOffset: 0, fuzzy: false },
     // For "inconsistent", we'll use the same calculation as "ovulation" but add fuzziness
@@ -71,7 +71,7 @@ const chartConfig = {
   lowestEnergy: {
     "prePeriod": { daysFromEnd: 5, fuzzy: false },
     "duringPeriod": { daysFromEnd: 3, fuzzy: false },
-    "postOvulation": { daysFromEnd: 10, fuzzy: false },
+    "postOvulation": { daysFromEnd: 7, fuzzy: false }, // changed from 10 to 7 — Manyu
     "varies": { daysFromEnd: 7, fuzzy: true }
   },
   
