@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -65,8 +64,57 @@ const formatResultValue = (key: string, value: string): string => {
   }
 };
 
+// Helper function to generate personalized insights based on quiz answers
+const generateInsights = (results: QuizResults): string[] => {
+  const insights: string[] = [];
+  
+  // Insight 1 - Cycle predictability
+  if (results.cycleLength === 'inconsistent' || results.cycleLength === 'unknown' || results.periodLength === 'longer') {
+    insights.push("Even if your cycle feels a little unpredictable right now, that doesn't mean your body rhythm is random. It follows signals — even if they're quiet or irregular. This is your first step to tuning in.");
+  } else {
+    insights.push("Your body shifts across the month in ways that aren't random — they move in a rhythm. Understanding this is the first step to making your wellness journey feel more natural.");
+  }
+  
+  // Insight 2 - Energy peaks
+  if (results.peakEnergy === 'afterPeriod') {
+    insights.push("Some phases are naturally better for pushing, others for restoring. Since your energy tends to rise just after your period, that's a great time to move with intention. Flowing with that tide helps you build momentum without burnout.");
+  } else if (results.peakEnergy === 'ovulation') {
+    insights.push("Some phases are naturally better for pushing, others for restoring. Your energy seems to peak around ovulation — a great time for higher-intensity movement, if that's what your body is craving. The key is riding those peaks, not forcing through dips.");
+  } else {
+    insights.push("Some phases are naturally better for pushing, others for restoring. When you learn to move with your rhythm, movement feels less like pressure — more like flow.");
+  }
+  
+  // Insight 3 - Low energy phases
+  if (results.lowestEnergy === 'prePeriod') {
+    insights.push("Feeling a dip before your period is completely natural. That's not a flaw — it's your body asking for recalibration, not retreat.");
+  } else if (results.lowestEnergy === 'duringPeriod') {
+    insights.push("Feeling a dip during your period is completely natural. That's not a flaw — it's your body asking for recalibration, not retreat.");
+  } else if (results.lowestEnergy === 'postOvulation') {
+    insights.push("Your energy crash post-ovulation is a signal, not a setback. Adjusting your rhythm here can make a big difference.");
+  } else {
+    insights.push("Low-energy phases aren't setbacks. They're your body asking for a shift in pace, not a shutdown. Even gentle movement or rest can be productive.");
+  }
+  
+  // Insight 4 - Always show
+  insights.push("Most fitness plans were never made for cycling hormones — they were built around the male body, which runs on a 24-hour hormonal loop. Yours moves on a monthly tide.");
+  
+  // Insight 5 - Only show if condition is selected
+  if (results.condition && results.condition !== 'none') {
+    if (results.condition === 'pcod' || results.condition === 'pcos') {
+      insights.push("With PCOS or PCOD, your energy can fluctuate in more complicated ways — but it's not chaos. Starting here helps you make sense of it, one phase at a time.");
+    } else if (results.condition === 'thyroid') {
+      insights.push("Thyroid conditions can blur the rhythm, but they don't erase it. Your energy map is still a powerful way to reconnect.");
+    } else if (results.condition === 'menopause') {
+      insights.push("During menopause or perimenopause, your body's rhythm changes — but it doesn't disappear. This is a space to rediscover your new baseline.");
+    }
+  }
+  
+  return insights;
+};
+
 const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
   const isMobile = useIsMobile();
+  const personalizedInsights = generateInsights(results);
   
   return (
     <div className="animate-fade-in flex flex-col gap-6 md:gap-8">
@@ -121,23 +169,13 @@ const ResultsScreen: React.FC<ResultsScreenProps> = ({ results, onReset }) => {
         </div>
       </div>
       
-      {/* Text-based insights */}
+      {/* Text-based insights - updated for personalized content */}
       <div className="bg-white p-4 md:p-6 rounded-lg border border-gray-100 shadow-sm">
         <h3 className="text-lg font-medium mb-4">Energy Rhythm Insights</h3>
         <div className="space-y-4 text-rhythm-text">
-          <p>
-            Your energy rhythm has unique patterns that can help you plan activities, manage energy levels, and practice self-care throughout your cycle.
-          </p>
-          <p>
-            Pay special attention to your energy peaks around {results.peakEnergy === "afterPeriod" ? "the follicular phase" : 
-              results.peakEnergy === "ovulation" ? "ovulation" : "middle of your cycle"} for high-intensity activities.
-          </p>
-          <p>
-            During your low energy days, typically {results.lowestEnergy === "prePeriod" ? "before your period" : 
-              results.lowestEnergy === "duringPeriod" ? "during your period" : 
-              results.lowestEnergy === "postOvulation" ? "after ovulation" : "at various points in your cycle"}, 
-            prioritize rest and gentle movement.
-          </p>
+          {personalizedInsights.map((insight, index) => (
+            <p key={index}>{insight}</p>
+          ))}
         </div>
       </div>
       
