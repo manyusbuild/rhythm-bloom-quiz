@@ -193,7 +193,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     
     // Calculate control points for second Bézier segment (R to T)
     // R's outgoing control point: horizontal length equal to half the distance from R to S
-    const cp3x = R.x + (S.x - R.x) / 2;
+    const cp3x = R.x + (S.x - R.x);
     const cp3y = R.y; // Same y-level as R for flat tangent
     
     // T's incoming control point: horizontal length equal to twice the distance from S to T
@@ -240,7 +240,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     const cp2y = R.y;
     
     // Calculate control points for second Bézier segment (R to T)
-    const cp3x = R.x + (S.x - R.x) / 2;
+    const cp3x = R.x + (S.x - R.x);
     const cp3y = R.y;
     
     const cp4x = T.x - (T.x - S.x) * 2;
@@ -291,7 +291,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     const cp2x = R.x - (R.x - Q.x);
     const cp2y = R.y;
     
-    const cp3x = R.x + (S.x - R.x) / 2;
+    const cp3x = R.x + (S.x - R.x);
     const cp3y = R.y;
     
     const cp4x = T.x - (T.x - S.x) * 2;
