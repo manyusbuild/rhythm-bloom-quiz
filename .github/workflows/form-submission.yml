@@ -19,38 +19,57 @@ jobs:
         with:
           node-version: 18
 
+      - name: Debug Payload
+        run: |
+          echo "Event payload received:"
+          echo '${{ toJson(github.event) }}'
+
       - name: Process Form Submission
         run: |
+          # Create data directory if it doesn't exist
           mkdir -p data
           
-          # Create data file if it doesn't exist
+          # Create data file with initial structure if it doesn't exist
           if [ ! -f "data/submissions.json" ]; then
+            echo "Creating initial submissions.json file"
             echo '{"metadata":{"lastUpdated":"","totalSubmissions":0},"submissions":[]}' > data/submissions.json
           fi
           
           # Parse submission from dispatch payload
           SUBMISSION='${{ toJson(github.event.client_payload.submission) }}'
+          echo "Received submission: $SUBMISSION"
           
           # Read existing data
           DATA=$(cat data/submissions.json)
+          echo "Current data structure exists"
           
           # Update metadata and add submission
           node -e "
             const fs = require('fs');
-            const data = JSON.parse(fs.readFileSync('data/submissions.json', 'utf8'));
-            const submission = JSON.parse('${{ toJson(github.event.client_payload.submission) }}');
             
-            // Update metadata
-            data.metadata.lastUpdated = new Date().toISOString();
-            data.metadata.totalSubmissions = (data.submissions.length || 0) + 1;
-            
-            // Add submission to array
-            data.submissions.push(submission);
-            
-            // Write updated data back to file
-            fs.writeFileSync('data/submissions.json', JSON.stringify(data, null, 2));
-            
-            console.log('Submission added successfully');
+            try {
+              console.log('Processing submission in Node.js');
+              const data = JSON.parse(fs.readFileSync('data/submissions.json', 'utf8'));
+              const submission = JSON.parse('${{ toJson(github.event.client_payload.submission) }}');
+              
+              console.log('Current submission count:', data.submissions.length);
+              
+              // Update metadata
+              data.metadata.lastUpdated = new Date().toISOString();
+              data.metadata.totalSubmissions = (data.submissions.length || 0) + 1;
+              
+              // Add submission to array
+              data.submissions.push(submission);
+              
+              // Write updated data back to file
+              fs.writeFileSync('data/submissions.json', JSON.stringify(data, null, 2));
+              
+              console.log('Updated submission count:', data.submissions.length);
+              console.log('Submission added successfully');
+            } catch (error) {
+              console.error('Error processing submission:', error);
+              process.exit(1);
+            }
           "
 
       - name: Commit and Push
@@ -58,7 +77,9 @@ jobs:
           git config --global user.name "GitHub Action"
           git config --global user.email "action@github.com"
           git add data/submissions.json
+          git status
           git commit -m "Add new form submission [automated]"
           git push
         env:
-          GH_TOKEN: ${{ secrets.GH_FORM_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+

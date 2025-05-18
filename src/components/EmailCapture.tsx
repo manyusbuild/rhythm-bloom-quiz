@@ -34,8 +34,9 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
         timestamp: new Date().toISOString()
       };
       
-      // Use GitHub token from environment if in production
-      const githubToken = import.meta.env.PROD ? 'GH_FORM_TOKEN' : undefined;
+      // Get GitHub token from environment variable
+      const githubToken = import.meta.env.VITE_GITHUB_TOKEN;
+      console.log("GitHub token available:", !!githubToken);
       
       const success = await storeSubmission(submission, {
         owner: 'ManyusBuild',

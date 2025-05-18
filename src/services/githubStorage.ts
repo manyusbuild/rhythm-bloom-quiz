@@ -39,34 +39,46 @@ export const storeSubmission = async (
       id: submission.id || generateId()
     };
 
+    console.log(`Attempting to store submission for ${submissionWithId.email}`);
+
     // In production, we trigger the GitHub workflow to store in JSON file
     if (import.meta.env.PROD) {
+      console.log("Production mode detected, using GitHub API");
+      
       if (options.token) {
+        console.log("GitHub token available, triggering workflow");
         // Call GitHub Action workflow dispatch to update JSON file
         try {
-          const response = await fetch(
-            `https://api.github.com/repos/${options.owner}/${options.repo}/dispatches`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `token ${options.token}`,
-                'Accept': 'application/vnd.github.v3+json',
-                'Content-Type': 'application/json'
-              },
-              body: JSON.stringify({
-                event_type: 'form_submission',
-                client_payload: {
-                  submission: submissionWithId
-                }
-              })
+          const requestUrl = `https://api.github.com/repos/${options.owner}/${options.repo}/dispatches`;
+          console.log(`Sending request to: ${requestUrl}`);
+          
+          const payload = {
+            event_type: 'form_submission',
+            client_payload: {
+              submission: submissionWithId
             }
-          );
+          };
+          
+          console.log('Request payload:', JSON.stringify(payload));
+          
+          const response = await fetch(requestUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${options.token}`,
+              'Accept': 'application/vnd.github.v3+json',
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+          });
 
+          console.log('GitHub API response status:', response.status);
+          
           if (!response.ok) {
-            console.error('Failed to trigger workflow:', await response.text());
+            const errorText = await response.text();
+            console.error(`Failed to trigger workflow (${response.status}):`, errorText);
             // Fall back to local storage
             storeLocalSubmission(submissionWithId);
-            return true;
+            return false;
           }
 
           console.log('Successfully triggered GitHub workflow for submission storage');
@@ -76,9 +88,10 @@ export const storeSubmission = async (
         } catch (error) {
           console.error('Error triggering GitHub workflow:', error);
           storeLocalSubmission(submissionWithId);
-          return true;
+          return false;
         }
       } else {
+        console.warn("No GitHub token available, falling back to local storage");
         // No token available, use localStorage
         storeLocalSubmission(submissionWithId);
         return true;
@@ -86,12 +99,15 @@ export const storeSubmission = async (
     }
 
     // In development, store locally and optionally use GitHub Issues API if token is available
+    console.log("Development mode detected");
+    
     if (options.token) {
       try {
+        console.log("GitHub token available in development, creating issue");
         const response = await fetch(`https://api.github.com/repos/${options.owner}/${options.repo}/issues`, {
           method: 'POST',
           headers: {
-            'Authorization': `token ${options.token}`,
+            'Authorization': `Bearer ${options.token}`,
             'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json'
           },
@@ -116,13 +132,16 @@ Submitted at: ${submissionWithId.timestamp}
         });
 
         if (!response.ok) {
-          console.error('Failed to store submission as issue:', await response.text());
+          const errorText = await response.text();
+          console.error('Failed to store submission as issue:', errorText);
         } else {
           console.log('Stored submission as GitHub issue');
         }
       } catch (error) {
         console.error('Error storing submission as issue:', error);
       }
+    } else {
+      console.log("No GitHub token available in development, using local storage only");
     }
 
     // Always store locally in development
