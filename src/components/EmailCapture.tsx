@@ -34,7 +34,15 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
         timestamp: new Date().toISOString()
       };
       
-      const success = await storeSubmission(submission);
+      // Use GitHub token from environment if in production
+      const githubToken = import.meta.env.PROD ? 'GH_FORM_TOKEN' : undefined;
+      
+      const success = await storeSubmission(submission, {
+        owner: 'ManyusBuild',
+        repo: 'rhythm-bloom-submissions',
+        token: githubToken
+      });
+      
       if (success) {
         toast.success("Your personalized energy map has been saved!");
       } else {
