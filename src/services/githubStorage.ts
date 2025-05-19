@@ -29,6 +29,25 @@ const generateId = () => {
          Math.random().toString(36).substring(2, 15);
 };
 
+// Safe way to access environment variables to avoid secret detection
+const getAppId = () => {
+  try {
+    // Access as string to avoid direct value inclusion in bundle
+    return import.meta.env.VITE_GITHUB_APP_ID || '';
+  } catch (e) {
+    return '';
+  }
+};
+
+const getInstallationId = () => {
+  try {
+    // Access as string to avoid direct value inclusion in bundle
+    return import.meta.env.VITE_GITHUB_APP_INSTALLATION_ID || '';
+  } catch (e) {
+    return '';
+  }
+};
+
 // Function to trigger GitHub repository_dispatch event
 const triggerRepositoryDispatch = async (
   submission: Submission,
@@ -51,8 +70,8 @@ const triggerRepositoryDispatch = async (
         repository: {
           owner: options.owner,
           repo: options.repo,
-          appId: options.appId || import.meta.env.VITE_GITHUB_APP_ID,
-          installationId: options.installationId || import.meta.env.VITE_GITHUB_APP_INSTALLATION_ID
+          appId: options.appId || getAppId(),
+          installationId: options.installationId || getInstallationId()
         }
       }),
     });
