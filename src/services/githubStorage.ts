@@ -41,112 +41,45 @@ export const storeSubmission = async (
 
     console.log(`Attempting to store submission for ${submissionWithId.email}`);
 
-    // In production, we trigger the GitHub workflow to store in JSON file
+    // In production, use API gateway to trigger the GitHub workflow instead of direct API calls
+    // This way we don't expose the token in client-side code
     if (import.meta.env.PROD) {
-      console.log("Production mode detected, using GitHub API");
+      console.log("Production mode detected, using API gateway");
       
-      if (options.token) {
-        console.log("GitHub token available, triggering workflow");
-        // Call GitHub Action workflow dispatch to update JSON file
-        try {
-          const requestUrl = `https://api.github.com/repos/${options.owner}/${options.repo}/dispatches`;
-          console.log(`Sending request to: ${requestUrl}`);
-          
-          const payload = {
-            event_type: 'form_submission',
-            client_payload: {
-              submission: submissionWithId
-            }
-          };
-          
-          console.log('Request payload:', JSON.stringify(payload));
-          
-          const response = await fetch(requestUrl, {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${options.token}`,
-              'Accept': 'application/vnd.github.v3+json',
-              'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(payload)
-          });
-
-          console.log('GitHub API response status:', response.status);
-          
-          if (!response.ok) {
-            const errorText = await response.text();
-            console.error(`Failed to trigger workflow (${response.status}):`, errorText);
-            // Fall back to local storage
-            storeLocalSubmission(submissionWithId);
-            return false;
-          }
-
-          console.log('Successfully triggered GitHub workflow for submission storage');
-          // Also store locally for immediate access
-          storeLocalSubmission(submissionWithId);
-          return true;
-        } catch (error) {
-          console.error('Error triggering GitHub workflow:', error);
-          storeLocalSubmission(submissionWithId);
-          return false;
-        }
-      } else {
-        console.warn("No GitHub token available, falling back to local storage");
-        // No token available, use localStorage
-        storeLocalSubmission(submissionWithId);
-        return true;
-      }
-    }
-
-    // In development, store locally and optionally use GitHub Issues API if token is available
-    console.log("Development mode detected");
-    
-    if (options.token) {
       try {
-        console.log("GitHub token available in development, creating issue");
-        const response = await fetch(`https://api.github.com/repos/${options.owner}/${options.repo}/issues`, {
+        // This uses an API gateway or serverless function endpoint that will handle the GitHub API call
+        // with the token securely on the server side
+        const response = await fetch('/api/store-submission', {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${options.token}`,
-            'Accept': 'application/vnd.github.v3+json',
             'Content-Type': 'application/json'
           },
           body: JSON.stringify({
-            title: `Quiz Submission from ${submissionWithId.email}`,
-            body: `
-# Quiz Submission
-
-## User
-Email: ${submissionWithId.email}
-ID: ${submissionWithId.id}
-
-## Results
-\`\`\`json
-${JSON.stringify(submissionWithId.quizResults, null, 2)}
-\`\`\`
-
-Submitted at: ${submissionWithId.timestamp}
-            `,
-            labels: ['quiz-submission']
+            submission: submissionWithId
           })
         });
-
+        
         if (!response.ok) {
-          const errorText = await response.text();
-          console.error('Failed to store submission as issue:', errorText);
-        } else {
-          console.log('Stored submission as GitHub issue');
+          console.error(`API gateway error (${response.status}): ${await response.text()}`);
+          // Fall back to local storage
+          storeLocalSubmission(submissionWithId);
+          return false;
         }
+
+        console.log('Successfully stored submission via API gateway');
+        return true;
       } catch (error) {
-        console.error('Error storing submission as issue:', error);
+        console.error('Error using API gateway:', error);
+        storeLocalSubmission(submissionWithId);
+        return false;
       }
-    } else {
-      console.log("No GitHub token available in development, using local storage only");
     }
 
-    // Always store locally in development
+    // In development, store locally (no need to use GitHub API in dev mode)
+    console.log("Development mode detected, using local storage only");
     storeLocalSubmission(submissionWithId);
     return true;
+    
   } catch (error) {
     console.error('Error storing submission:', error);
     // Always fallback to local storage on error

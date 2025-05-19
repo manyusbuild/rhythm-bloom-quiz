@@ -34,14 +34,10 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
         timestamp: new Date().toISOString()
       };
       
-      // Get GitHub token from environment variable
-      const githubToken = import.meta.env.VITE_GITHUB_TOKEN;
-      console.log("GitHub token available:", !!githubToken);
-      
       const success = await storeSubmission(submission, {
         owner: 'ManyusBuild',
-        repo: 'rhythm-bloom-submissions',
-        token: githubToken
+        repo: 'rhythm-bloom-submissions'
+        // No token passed from component - handled by the service
       });
       
       if (success) {
