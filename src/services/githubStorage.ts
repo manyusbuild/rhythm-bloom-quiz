@@ -7,7 +7,8 @@
 interface GitHubStorageOptions {
   owner: string;
   repo: string;
-  token?: string;
+  appId?: number;
+  installationId?: number;
 }
 
 export interface Submission {
@@ -20,12 +21,53 @@ export interface Submission {
 const defaultOptions: GitHubStorageOptions = {
   owner: 'ManyusBuild', // GitHub username
   repo: 'rhythm-bloom-submissions', // Repository for submissions
+  appId: 1294071, // Your GitHub App ID
+  installationId: 67355545, // Your GitHub App Installation ID
 };
 
 // Generate a unique ID for submissions
 const generateId = () => {
   return 'sub_' + Math.random().toString(36).substring(2, 15) + 
          Math.random().toString(36).substring(2, 15);
+};
+
+// Function to trigger GitHub repository_dispatch event
+const triggerRepositoryDispatch = async (
+  submission: Submission,
+  options: GitHubStorageOptions
+): Promise<boolean> => {
+  try {
+    // In production, we use a proxy endpoint to trigger the GitHub workflow
+    // This endpoint will handle GitHub App authentication server-side
+    const apiUrl = 'https://ap-rhythm-bloom.netlify.app/.netlify/functions/submit';
+    
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        submission,
+        repository: {
+          owner: options.owner,
+          repo: options.repo,
+          appId: options.appId,
+          installationId: options.installationId
+        }
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`API error (${response.status}): ${errorText}`);
+      return false;
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error triggering repository_dispatch:', error);
+    return false;
+  }
 };
 
 export const storeSubmission = async (
@@ -41,35 +83,24 @@ export const storeSubmission = async (
 
     console.log(`Attempting to store submission for ${submissionWithId.email}`);
 
-    // In production, use API gateway to trigger the GitHub workflow instead of direct API calls
-    // This way we don't expose the token in client-side code
+    // In production environment, use GitHub repository_dispatch
     if (import.meta.env.PROD) {
-      console.log("Production mode detected, using API gateway");
+      console.log("Production mode detected, using GitHub App integration");
       
       try {
-        // This uses an API gateway or serverless function endpoint that will handle the GitHub API call
-        // with the token securely on the server side
-        const response = await fetch('/api/store-submission', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            submission: submissionWithId
-          })
-        });
+        const success = await triggerRepositoryDispatch(submissionWithId, options);
         
-        if (!response.ok) {
-          console.error(`API gateway error (${response.status}): ${await response.text()}`);
+        if (!success) {
+          console.error('Failed to trigger GitHub repository_dispatch');
           // Fall back to local storage
           storeLocalSubmission(submissionWithId);
           return false;
         }
 
-        console.log('Successfully stored submission via API gateway');
+        console.log('Successfully triggered GitHub repository_dispatch');
         return true;
       } catch (error) {
-        console.error('Error using API gateway:', error);
+        console.error('Error using GitHub App integration:', error);
         storeLocalSubmission(submissionWithId);
         return false;
       }
