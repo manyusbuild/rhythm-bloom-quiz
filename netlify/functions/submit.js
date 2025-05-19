@@ -57,9 +57,9 @@ exports.handler = async (event, context) => {
     const octokit = new Octokit({
       authStrategy: createAppAuth,
       auth: {
-        appId: repository.appId || process.env.GITHUB_APP_ID,
+        appId: process.env.GITHUB_APP_ID || repository.appId,
         privateKey: privateKey.replace(/\\n/g, '\n'),
-        installationId: repository.installationId || process.env.GITHUB_APP_INSTALLATION_ID,
+        installationId: process.env.GITHUB_APP_INSTALLATION_ID || repository.installationId,
       },
     });
 

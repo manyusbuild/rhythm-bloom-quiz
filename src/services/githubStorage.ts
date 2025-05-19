@@ -21,8 +21,6 @@ export interface Submission {
 const defaultOptions: GitHubStorageOptions = {
   owner: 'ManyusBuild', // GitHub username
   repo: 'rhythm-bloom-submissions', // Repository for submissions
-  appId: 1294071, // Your GitHub App ID
-  installationId: 67355545, // Your GitHub App Installation ID
 };
 
 // Generate a unique ID for submissions
@@ -39,7 +37,9 @@ const triggerRepositoryDispatch = async (
   try {
     // In production, we use a proxy endpoint to trigger the GitHub workflow
     // This endpoint will handle GitHub App authentication server-side
-    const apiUrl = 'https://ap-rhythm-bloom.netlify.app/.netlify/functions/submit';
+    const apiUrl = import.meta.env.PROD ? 
+      '/.netlify/functions/submit' : 
+      'https://ap-rhythm-bloom.netlify.app/.netlify/functions/submit';
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -51,8 +51,8 @@ const triggerRepositoryDispatch = async (
         repository: {
           owner: options.owner,
           repo: options.repo,
-          appId: options.appId,
-          installationId: options.installationId
+          appId: options.appId || import.meta.env.VITE_GITHUB_APP_ID,
+          installationId: options.installationId || import.meta.env.VITE_GITHUB_APP_INSTALLATION_ID
         }
       }),
     });
