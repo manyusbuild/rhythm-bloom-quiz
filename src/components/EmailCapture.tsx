@@ -34,11 +34,7 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
         timestamp: new Date().toISOString()
       };
       
-      const success = await storeSubmission(submission, {
-        owner: 'ManyusBuild',
-        repo: 'rhythm-bloom-submissions'
-        // No token passed from component - handled by the service
-      });
+      const success = await storeSubmission(submission);
       
       if (success) {
         toast.success("Your personalized energy map has been saved!");
