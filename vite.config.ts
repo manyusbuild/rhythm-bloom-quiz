@@ -24,9 +24,5 @@ export default defineConfig(({ mode }) => ({
   // Properly expose environment variables
   define: {
     __APP_VERSION__: JSON.stringify(process.env.npm_package_version),
-    // Use string replacements instead of direct env references
-    // This prevents the actual values from appearing in the build output
-    'import.meta.env.VITE_GITHUB_APP_ID': JSON.stringify(process.env.VITE_GITHUB_APP_ID || ''),
-    'import.meta.env.VITE_GITHUB_APP_INSTALLATION_ID': JSON.stringify(process.env.VITE_GITHUB_APP_INSTALLATION_ID || ''),
   },
 }));

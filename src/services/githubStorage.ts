@@ -4,13 +4,6 @@
  * Stores form submissions in a GitHub repository as issues or JSON file
  */
 
-interface GitHubStorageOptions {
-  owner: string;
-  repo: string;
-  appId?: number;
-  installationId?: number;
-}
-
 export interface Submission {
   id?: string;
   email: string;
@@ -18,43 +11,18 @@ export interface Submission {
   timestamp: string;
 }
 
-const defaultOptions: GitHubStorageOptions = {
-  owner: 'ManyusBuild', // GitHub username
-  repo: 'rhythm-bloom-submissions', // Repository for submissions
-};
-
 // Generate a unique ID for submissions
 const generateId = () => {
   return 'sub_' + Math.random().toString(36).substring(2, 15) + 
          Math.random().toString(36).substring(2, 15);
 };
 
-// Safe way to access environment variables to avoid secret detection
-const getAppId = () => {
-  try {
-    // Access as string to avoid direct value inclusion in bundle
-    return import.meta.env.VITE_GITHUB_APP_ID || '';
-  } catch (e) {
-    return '';
-  }
-};
-
-const getInstallationId = () => {
-  try {
-    // Access as string to avoid direct value inclusion in bundle
-    return import.meta.env.VITE_GITHUB_APP_INSTALLATION_ID || '';
-  } catch (e) {
-    return '';
-  }
-};
-
-// Function to trigger GitHub repository_dispatch event
+// Function to trigger repository_dispatch event
 const triggerRepositoryDispatch = async (
-  submission: Submission,
-  options: GitHubStorageOptions
+  submission: Submission
 ): Promise<boolean> => {
   try {
-    // In production, we use a proxy endpoint to trigger the GitHub workflow
+    // In production, we use the Netlify function endpoint to trigger the GitHub workflow
     // This endpoint will handle GitHub App authentication server-side
     const apiUrl = import.meta.env.PROD ? 
       '/.netlify/functions/submit' : 
@@ -65,15 +33,7 @@ const triggerRepositoryDispatch = async (
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        submission,
-        repository: {
-          owner: options.owner,
-          repo: options.repo,
-          appId: options.appId || getAppId(),
-          installationId: options.installationId || getInstallationId()
-        }
-      }),
+      body: JSON.stringify({ submission }),
     });
     
     if (!response.ok) {
@@ -89,10 +49,7 @@ const triggerRepositoryDispatch = async (
   }
 };
 
-export const storeSubmission = async (
-  submission: Submission,
-  options: GitHubStorageOptions = defaultOptions
-): Promise<boolean> => {
+export const storeSubmission = async (submission: Submission): Promise<boolean> => {
   try {
     // Add ID to submission if not present
     const submissionWithId: Submission = {
@@ -107,7 +64,7 @@ export const storeSubmission = async (
       console.log("Production mode detected, using GitHub App integration");
       
       try {
-        const success = await triggerRepositoryDispatch(submissionWithId, options);
+        const success = await triggerRepositoryDispatch(submissionWithId);
         
         if (!success) {
           console.error('Failed to trigger GitHub repository_dispatch');

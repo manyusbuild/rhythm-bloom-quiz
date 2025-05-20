@@ -11,6 +11,5 @@
 
 [build.environment]
   NODE_VERSION = "18"
-  # Tell Netlify to ignore VITE_ prefixed variables during secrets scanning
+  # This is no longer needed but kept for clarity
   SECRETS_SCAN_OMIT_KEYS = "VITE_GITHUB_APP_ID,VITE_GITHUB_APP_INSTALLATION_ID"
-

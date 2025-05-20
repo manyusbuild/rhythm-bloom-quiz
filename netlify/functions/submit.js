@@ -2,6 +2,12 @@
 const { Octokit } = require("@octokit/rest");
 const { createAppAuth } = require("@octokit/auth-app");
 
+// Hard-coded repository information
+const REPOSITORY_INFO = {
+  owner: 'ManyusBuild',
+  repo: 'rhythm-bloom-submissions'
+};
+
 exports.handler = async (event, context) => {
   // Enable CORS
   const headers = {
@@ -31,24 +37,31 @@ exports.handler = async (event, context) => {
   try {
     // Parse request body
     const payload = JSON.parse(event.body);
-    const { submission, repository } = payload;
+    const { submission } = payload;
     
-    if (!submission || !repository) {
+    if (!submission) {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: "Missing required fields" }),
+        body: JSON.stringify({ error: "Missing submission data" }),
       };
     }
 
-    // Load private key from environment variable
+    console.log("Processing submission from:", submission.email);
+
+    // Load GitHub App credentials from environment variables
     const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
-    if (!privateKey) {
+    const appId = process.env.GITHUB_APP_ID;
+    const installationId = process.env.GITHUB_APP_INSTALLATION_ID;
+
+    // Validate required environment variables
+    if (!privateKey || !appId || !installationId) {
+      console.error("Missing GitHub App credentials in environment variables");
       return {
         statusCode: 500,
         headers,
         body: JSON.stringify({ 
-          error: "Server configuration error - missing private key" 
+          error: "Server configuration error - missing GitHub App credentials" 
         }),
       };
     }
@@ -57,16 +70,18 @@ exports.handler = async (event, context) => {
     const octokit = new Octokit({
       authStrategy: createAppAuth,
       auth: {
-        appId: process.env.GITHUB_APP_ID || repository.appId,
+        appId: appId,
         privateKey: privateKey.replace(/\\n/g, '\n'),
-        installationId: process.env.GITHUB_APP_INSTALLATION_ID || repository.installationId,
+        installationId: installationId,
       },
     });
 
+    console.log(`Triggering repository_dispatch event for ${REPOSITORY_INFO.owner}/${REPOSITORY_INFO.repo}`);
+
     // Trigger repository_dispatch event
     const result = await octokit.repos.createDispatchEvent({
-      owner: repository.owner,
-      repo: repository.repo,
+      owner: REPOSITORY_INFO.owner,
+      repo: REPOSITORY_INFO.repo,
       event_type: "form_submission",
       client_payload: {
         submission,
