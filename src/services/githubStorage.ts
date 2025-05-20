@@ -22,11 +22,12 @@ const triggerRepositoryDispatch = async (
   submission: Submission
 ): Promise<boolean> => {
   try {
-    // In production, we use the Netlify function endpoint to trigger the GitHub workflow
-    // This endpoint will handle GitHub App authentication server-side
+    // Use the full Netlify URL in production to avoid cross-origin issues
     const apiUrl = import.meta.env.PROD ? 
-      '/.netlify/functions/submit' : 
+      'https://soft-bienenstitch-ae3012.netlify.app/.netlify/functions/submit' : 
       'https://ap-rhythm-bloom.netlify.app/.netlify/functions/submit';
+    
+    console.log(`Sending submission to: ${apiUrl}`);
     
     const response = await fetch(apiUrl, {
       method: 'POST',
@@ -42,6 +43,8 @@ const triggerRepositoryDispatch = async (
       return false;
     }
     
+    const responseData = await response.json();
+    console.log('Repository dispatch response:', responseData);
     return true;
   } catch (error) {
     console.error('Error triggering repository_dispatch:', error);
