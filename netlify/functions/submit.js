@@ -16,8 +16,12 @@ exports.handler = async (event, context) => {
     "Access-Control-Allow-Methods": "POST, OPTIONS",
   };
 
+  console.log("Function invoked with method:", event.httpMethod);
+  console.log("Request headers:", JSON.stringify(event.headers));
+
   // Handle preflight OPTIONS request
   if (event.httpMethod === "OPTIONS") {
+    console.log("Handling OPTIONS request");
     return {
       statusCode: 200,
       headers,
@@ -27,19 +31,38 @@ exports.handler = async (event, context) => {
 
   // Only allow POST requests
   if (event.httpMethod !== "POST") {
+    console.log(`Method not allowed: ${event.httpMethod}`);
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ error: "Method not allowed" }),
+      body: JSON.stringify({ error: "Method not allowed", method: event.httpMethod }),
     };
   }
 
   try {
+    console.log("Parsing request body");
     // Parse request body
-    const payload = JSON.parse(event.body);
+    let payload;
+    try {
+      payload = JSON.parse(event.body);
+      console.log("Request payload:", JSON.stringify(payload));
+    } catch (parseError) {
+      console.error("Error parsing request body:", parseError);
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ 
+          error: "Invalid JSON in request body", 
+          details: parseError.message,
+          receivedBody: event.body 
+        }),
+      };
+    }
+
     const { submission } = payload;
     
     if (!submission) {
+      console.error("Missing submission data in payload");
       return {
         statusCode: 400,
         headers,
@@ -53,6 +76,13 @@ exports.handler = async (event, context) => {
     const privateKey = process.env.GITHUB_APP_PRIVATE_KEY;
     const appId = process.env.GITHUB_APP_ID;
     const installationId = process.env.GITHUB_APP_INSTALLATION_ID;
+
+    // Log environment variable presence (not values for security)
+    console.log("Environment variables check:", {
+      hasPrivateKey: !!privateKey,
+      hasAppId: !!appId,
+      hasInstallationId: !!installationId
+    });
 
     // Validate required environment variables
     if (!privateKey || !appId || !installationId) {
@@ -106,7 +136,8 @@ exports.handler = async (event, context) => {
       headers,
       body: JSON.stringify({ 
         error: "Failed to process submission", 
-        details: error.message 
+        details: error.message,
+        stack: error.stack
       }),
     };
   }

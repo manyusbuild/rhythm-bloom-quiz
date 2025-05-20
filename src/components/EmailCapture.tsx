@@ -15,9 +15,11 @@ interface EmailCaptureProps {
 const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }) => {
   const [email, setEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [statusMessage, setStatusMessage] = useState('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setStatusMessage('');
     
     if (!email || !email.includes('@') || !email.includes('.')) {
       toast.error("Please enter a valid email address");
@@ -25,6 +27,7 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
     }
     
     setIsSubmitting(true);
+    setStatusMessage('Sending your energy map...');
     
     // Store submission in GitHub
     try {
@@ -41,13 +44,17 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
       if (success) {
         toast.success("Your personalized energy map has been saved!");
         console.log("Submission stored successfully");
+        setStatusMessage('Submission stored successfully!');
       } else {
         toast.error("There was an issue saving your data. We'll continue anyway.");
         console.error("Failed to store submission, but continuing flow");
+        setStatusMessage('Failed to store submission, continuing anyway');
       }
     } catch (error) {
       console.error("Error storing submission:", error);
+      console.error("Error details:", (error as Error).message);
       toast.error("There was an error, but we'll continue anyway");
+      setStatusMessage('Error during submission, continuing anyway');
     }
     
     // Continue with the quiz flow regardless of submission status
@@ -81,6 +88,10 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
           className="py-6 px-4 rounded-xl border-rhythm-purple focus:border-rhythm-accent1"
           required
         />
+        
+        {statusMessage && (
+          <div className="text-sm text-rhythm-accent1">{statusMessage}</div>
+        )}
         
         <Button
           type="submit"
