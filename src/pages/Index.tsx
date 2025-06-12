@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import QuizIntro from "@/components/QuizIntro";
 import QuizQuestion from "@/components/QuizQuestion";
@@ -9,27 +8,32 @@ import { toast } from "sonner";
 
 // Define our quiz flow stages
 type QuizStage = 'intro' | 'questions' | 'email' | 'results';
-
 const Index = () => {
   const [stage, setStage] = useState<QuizStage>('intro');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<number, { id: string; value: string }>>({});
+  const [answers, setAnswers] = useState<Record<number, {
+    id: string;
+    value: string;
+  }>>({});
   const [results, setResults] = useState<QuizResults>(defaultResults);
-  
+
   // Start the quiz
   const handleStart = () => {
     setStage('questions');
   };
-  
+
   // Handle answer selection
   const handleSelectAnswer = (answerId: string, value: string) => {
     const questionId = quizQuestions[currentQuestionIndex].id;
     setAnswers(prev => ({
       ...prev,
-      [questionId]: { id: answerId, value }
+      [questionId]: {
+        id: answerId,
+        value
+      }
     }));
   };
-  
+
   // Navigate to next question or stage
   const handleNext = () => {
     if (currentQuestionIndex < quizQuestions.length - 1) {
@@ -41,7 +45,6 @@ const Index = () => {
       const peakEnergy = answers[3]?.value || "";
       const lowestEnergy = answers[4]?.value || "";
       const condition = answers[5]?.value || "";
-      
       setResults({
         cycleLength,
         periodLength,
@@ -49,19 +52,19 @@ const Index = () => {
         lowestEnergy,
         condition
       });
-      
+
       // Move to email capture
       setStage('email');
     }
   };
-  
+
   // Navigate to previous question
   const handlePrevious = () => {
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(prev => prev - 1);
     }
   };
-  
+
   // Handle email submission
   const handleEmailSubmit = (email: string) => {
     // Update results with email
@@ -69,16 +72,15 @@ const Index = () => {
       ...prev,
       email
     }));
-    
     toast.success("Your personalized energy map has been generated!");
     setStage('results');
   };
-  
+
   // Skip email capture
   const handleSkipEmail = () => {
     setStage('results');
   };
-  
+
   // Reset the quiz
   const handleReset = () => {
     setStage('intro');
@@ -86,49 +88,28 @@ const Index = () => {
     setAnswers({});
     setResults(defaultResults);
   };
-  
+
   // Determine which content to render based on current stage
   const renderContent = () => {
     switch (stage) {
       case 'intro':
         return <QuizIntro onStart={handleStart} />;
-      
       case 'questions':
         const currentQuestion = quizQuestions[currentQuestionIndex];
         const selectedAnswer = answers[currentQuestion.id]?.id || null;
-        
-        return (
-          <QuizQuestion
-            question={currentQuestion}
-            currentStep={currentQuestionIndex + 1}
-            totalSteps={quizQuestions.length}
-            selectedAnswer={selectedAnswer}
-            onSelectAnswer={handleSelectAnswer}
-            onNext={handleNext}
-            onPrevious={handlePrevious}
-          />
-        );
-      
+        return <QuizQuestion question={currentQuestion} currentStep={currentQuestionIndex + 1} totalSteps={quizQuestions.length} selectedAnswer={selectedAnswer} onSelectAnswer={handleSelectAnswer} onNext={handleNext} onPrevious={handlePrevious} />;
       case 'email':
-        return <EmailCapture 
-          onSubmit={handleEmailSubmit} 
-          onSkip={handleSkipEmail} 
-          results={results}
-        />;
-      
+        return <EmailCapture onSubmit={handleEmailSubmit} onSkip={handleSkipEmail} results={results} />;
       case 'results':
         return <ResultsScreen results={results} onReset={handleReset} />;
-        
       default:
         return <QuizIntro onStart={handleStart} />;
     }
   };
-
-  return (
-    <div className="min-h-screen rhythm-gradient-bg pt-6 pb-12">
+  return <div className="min-h-screen rhythm-gradient-bg pt-6 pb-12">
       <div className="container">
         <header className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-rhythm-accent2">Rhythm Bloom</h1>
+          <h1 className="text-3xl font-bold text-rhythm-accent2">Body Rhythms</h1>
           <p className="text-rhythm-text">Mapping your natural cycle energy</p>
         </header>
         
@@ -142,8 +123,6 @@ const Index = () => {
           <p>© 2025 Rhythm Bloom • Privacy-focused • Created with care</p>
         </footer>
       </div>
-    </div>
-  );
+    </div>;
 };
-
 export default Index;
