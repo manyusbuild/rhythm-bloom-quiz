@@ -9,7 +9,7 @@ interface QuizIntroProps {
 const QuizIntro: React.FC<QuizIntroProps> = ({ onStart }) => {
   return (
     <div className="animate-fade-in text-center max-w-xl mx-auto">
-      <h1 className="text-3xl md:text-4xl font-semibold text-gray-800 mb-4 mt-10">
+      <h1 className="text-3xl md:text-4xl font-serif font-semibold text-gray-800 mb-4 mt-10">
         Discover Your Rhythm
       </h1>
       <p className="text-rhythm-text text-lg mb-8">
