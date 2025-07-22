@@ -1,15 +1,13 @@
-
 import React from 'react';
 import { Button } from "@/components/ui/button";
-
 interface QuizIntroProps {
   onStart: () => void;
 }
-
-const QuizIntro: React.FC<QuizIntroProps> = ({ onStart }) => {
-  return (
-    <div className="animate-fade-in text-center max-w-xl mx-auto">
-      <h1 className="text-3xl md:text-4xl font-serif font-semibold text-gray-800 mb-4 mt-10">
+const QuizIntro: React.FC<QuizIntroProps> = ({
+  onStart
+}) => {
+  return <div className="animate-fade-in text-center max-w-xl mx-auto">
+      <h1 className="font-normal font-text-gray-800 mb-4 mt-10 md:text-5xl font-normal">
         Discover Your Rhythm
       </h1>
       <p className="text-rhythm-text text-lg mb-8">
@@ -30,14 +28,9 @@ const QuizIntro: React.FC<QuizIntroProps> = ({ onStart }) => {
         5 simple questions • Takes 2 minutes • Get your personalized cycle map
       </p>
       
-      <Button 
-        onClick={onStart}
-        className="bg-rhythm-accent1 hover:bg-rhythm-accent2 text-white py-2 px-8 rounded-full text-lg"
-      >
+      <Button onClick={onStart} className="bg-rhythm-accent1 hover:bg-rhythm-accent2 text-white py-2 px-8 rounded-full text-lg">
         Begin Mapping
       </Button>
-    </div>
-  );
+    </div>;
 };
-
 export default QuizIntro;
