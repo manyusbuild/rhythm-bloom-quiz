@@ -109,7 +109,7 @@ const Index = () => {
   return <div className="min-h-screen rhythm-gradient-bg pt-6 pb-12">
       <div className="container">
         <header className="text-center mb-6">
-          <h1 className="text-3xl font-serif font-normal text-zinc-950">body rhythms</h1>
+          <h1 className="font-serif font-normal text-2xl text-zinc-800">body rhythms</h1>
           
         </header>
         
