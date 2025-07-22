@@ -120,7 +120,7 @@ const Index = () => {
         </main>
         
         <footer className="text-center mt-8 text-rhythm-text text-sm">
-          <p>© 2025 Rhythm Bloom • Privacy-focused • Created with care</p>
+          <p>© 2025 BodyRhythms • Privacy-focused • Created with care</p>
         </footer>
       </div>
     </div>;
