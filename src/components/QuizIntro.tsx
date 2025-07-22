@@ -7,7 +7,7 @@ const QuizIntro: React.FC<QuizIntroProps> = ({
   onStart
 }) => {
   return <div className="animate-fade-in text-center max-w-xl mx-auto">
-      <h1 className="font-normal font-text-gray-800 mb-4 mt-10 md:text-5xl font-normal">
+      <h1 className="font-text-gray-800 mb-4 mt-10 md:text-5xl text-4xl font-semibold">
         Discover Your Rhythm
       </h1>
       <p className="text-rhythm-text text-lg mb-8">
