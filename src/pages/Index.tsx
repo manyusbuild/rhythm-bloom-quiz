@@ -109,7 +109,7 @@ const Index = () => {
   return <div className="min-h-screen rhythm-gradient-bg pt-6 pb-12">
       <div className="container">
         <header className="text-center mb-6">
-          <h1 className="text-3xl font-bold text-rhythm-accent2">Body Rhythms</h1>
+          <h1 className="text-3xl font-serif font-bold text-rhythm-accent2">body rhythms</h1>
           <p className="text-rhythm-text">Mapping your natural cycle energy</p>
         </header>
         
