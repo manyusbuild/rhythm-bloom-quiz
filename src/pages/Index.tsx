@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import QuizIntro from "@/components/QuizIntro";
 import QuizQuestion from "@/components/QuizQuestion";
 import EmailCapture from "@/components/EmailCapture";
+import LoadingScreen from "@/components/LoadingScreen";
 import ResultsScreen from "@/components/ResultsScreen";
 import { quizQuestions, defaultResults, QuizResults } from "@/utils/quizData";
 import { toast } from "sonner";
 
 // Define our quiz flow stages
-type QuizStage = 'intro' | 'questions' | 'email' | 'results';
+type QuizStage = 'intro' | 'questions' | 'email' | 'loading' | 'results';
 const Index = () => {
   const [stage, setStage] = useState<QuizStage>('intro');
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
@@ -73,11 +74,16 @@ const Index = () => {
       email
     }));
     toast.success("Your personalized energy map has been generated!");
-    setStage('results');
+    setStage('loading');
   };
 
   // Skip email capture
   const handleSkipEmail = () => {
+    setStage('loading');
+  };
+
+  // Handle loading completion
+  const handleLoadingComplete = () => {
     setStage('results');
   };
 
@@ -100,6 +106,8 @@ const Index = () => {
         return <QuizQuestion question={currentQuestion} currentStep={currentQuestionIndex + 1} totalSteps={quizQuestions.length} selectedAnswer={selectedAnswer} onSelectAnswer={handleSelectAnswer} onNext={handleNext} onPrevious={handlePrevious} />;
       case 'email':
         return <EmailCapture onSubmit={handleEmailSubmit} onSkip={handleSkipEmail} results={results} />;
+      case 'loading':
+        return <LoadingScreen onComplete={handleLoadingComplete} />;
       case 'results':
         return <ResultsScreen results={results} onReset={handleReset} />;
       default:

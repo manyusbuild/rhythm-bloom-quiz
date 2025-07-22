@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -42,18 +41,15 @@ const EmailCapture: React.FC<EmailCaptureProps> = ({ onSubmit, onSkip, results }
       const success = await storeSubmission(submission);
       
       if (success) {
-        toast.success("Your personalized energy map has been saved!");
         console.log("Submission stored successfully");
         setStatusMessage('Submission stored successfully!');
       } else {
-        toast.error("There was an issue saving your data. We'll continue anyway.");
         console.error("Failed to store submission, but continuing flow");
         setStatusMessage('Failed to store submission, continuing anyway');
       }
     } catch (error) {
       console.error("Error storing submission:", error);
       console.error("Error details:", (error as Error).message);
-      toast.error("There was an error, but we'll continue anyway");
       setStatusMessage('Error during submission, continuing anyway');
     }
     
