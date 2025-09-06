@@ -40,10 +40,16 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
     y: padding + innerHeight - (point.y * innerHeight)
   }));
   
-  // Scale the data points for markers
+  // Get energy range from chart data for dynamic scaling
+  const energyValues = points.map(p => p.energy);
+  const minEnergy = Math.min(...energyValues);
+  const maxEnergy = Math.max(...energyValues);
+  const energyRange = maxEnergy - minEnergy;
+  
+  // Scale the data points for markers using dynamic energy range
   const scaledPoints = points.map(point => ({
     x: padding + (point.day - 1) * (innerWidth / (cycleLength - 1)),
-    y: padding + innerHeight - ((point.energy - 1) / 4) * innerHeight
+    y: padding + innerHeight - ((point.energy - minEnergy) / energyRange) * innerHeight
   }));
   
   // Generate SVG path for bezier curve
@@ -64,14 +70,24 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
   const lowPointIndex = points.findIndex(p => p.day === lowestDay);
   const lowPoint = scaledPoints[lowPointIndex] || scaledPoints[scaledPoints.length - 2];
   
-  // Energy scale labels (descriptive text)
-  const energyLabels = [
-    "Peak Energy", 
-    "High", 
-    "Moderate", 
-    "Low", 
-    "Very Low"
-  ];
+  // Dynamic energy scale labels based on actual energy range
+  const generateEnergyLabels = () => {
+    const labels = [];
+    const steps = 4; // Create 5 levels (0-4 indices)
+    for (let i = 0; i <= steps; i++) {
+      const energyValue = maxEnergy - (i * energyRange / steps);
+      if (energyValue === maxEnergy) {
+        labels.push("Peak Energy");
+      } else if (energyValue === minEnergy) {
+        labels.push("Low Energy");
+      } else {
+        labels.push(`Level ${energyValue.toFixed(1)}`);
+      }
+    }
+    return labels;
+  };
+  
+  const energyLabels = generateEnergyLabels();
   
   // Calculate grid lines (every 7 days)
   const dayGridLines = [];
@@ -130,13 +146,13 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
             </defs>
             
             {/* Chart grid - horizontal lines for each energy level */}
-            {Array.from({ length: 5 }).map((_, i) => (
+            {energyLabels.map((_, i) => (
               <line 
                 key={`h-line-${i}`}
                 x1={padding} 
-                y1={padding + (innerHeight / 4) * i} 
+                y1={padding + (innerHeight / (energyLabels.length - 1)) * i} 
                 x2={width - padding} 
-                y2={padding + (innerHeight / 4) * i}
+                y2={padding + (innerHeight / (energyLabels.length - 1)) * i}
                 className="energy-chart-grid" 
                 stroke="#E5E7EB"
                 strokeWidth="1"
@@ -317,7 +333,7 @@ const EnergyChart: React.FC<EnergyChartProps> = ({ results, onReset }) => {
               <text 
                 key={`y-label-${i}`} 
                 x={padding - 10} 
-                y={padding + (innerHeight / 4) * i} 
+                y={padding + (innerHeight / (energyLabels.length - 1)) * i} 
                 fontSize="12" 
                 fill="#8E9196" 
                 textAnchor="end"
