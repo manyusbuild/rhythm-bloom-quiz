@@ -153,17 +153,21 @@ export const generateChartData = (results: QuizResults): ChartData => {
   // Set dip fuzziness flag
   fuzziness.dip = lowestEnergyConfig.fuzzy;
 
+  // Get personalized energy intensity values
+  const peakEnergyIntensity = parseFloat(results.peakEnergyIntensity) || 4.5;
+  const lowEnergyIntensity = parseFloat(results.lowEnergyIntensity) || 1.5;
+
   // Define the three key points as requested
   const keyPoints = [
-    { day: startDay, energy: 1 },    // Start point: day 1, low energy
-    { day: peakDay, energy: 5 },     // Peak energy point
-    { day: endDay, energy: 1 }       // End point: cycle end, low energy
+    { day: startDay, energy: lowEnergyIntensity },    // Start point: day 1, personalized low energy
+    { day: peakDay, energy: peakEnergyIntensity },     // Peak energy point, personalized high energy
+    { day: endDay, energy: lowEnergyIntensity }       // End point: cycle end, personalized low energy
   ];
 
-  // Define control points
+  // Define control points with personalized energy levels
   const controlPoints = [
-    { day: periodEndDay, energy: 2.5 },  // End of period, moderate energy
-    { day: Math.floor(cycleLength / 2), energy: 4 }  // Ovulation, high-ish energy
+    { day: periodEndDay, energy: (lowEnergyIntensity + peakEnergyIntensity) / 2 },  // End of period, moderate energy
+    { day: Math.floor(cycleLength / 2), energy: peakEnergyIntensity * 0.8 }  // Ovulation, slightly below peak
   ];
 
   // Generate Bezier curve using the key points and control points
@@ -181,7 +185,7 @@ export const generateChartData = (results: QuizResults): ChartData => {
     
     points.push({ 
       day, 
-      energy: closest.y * 5 // Scale to 1-5 range
+      energy: closest.y * (peakEnergyIntensity - lowEnergyIntensity) + lowEnergyIntensity // Scale to personalized range
     });
   }
 
@@ -223,15 +227,20 @@ const generateSimplifiedBezierCurve = (
   const bezierPoints: BezierPoint[] = [];
   const numPoints = 100; // Number of points to generate along the curve
   
+  // Get energy range for scaling
+  const minEnergy = Math.min(...keyPoints.map(p => p.energy));
+  const maxEnergy = Math.max(...keyPoints.map(p => p.energy));
+  const energyRange = maxEnergy - minEnergy;
+  
   // Scale points to 0-1 range for x (day) and y (energy) values
   const scaledKeyPoints = keyPoints.map(point => ({
     x: (point.day - 1) / (cycleLength - 1),
-    y: (point.energy - 1) / 4  // Scale 1-5 to 0-1
+    y: (point.energy - minEnergy) / energyRange  // Scale to personalized range 0-1
   }));
   
   const scaledControlPoints = controlPoints.map(point => ({
     x: (point.day - 1) / (cycleLength - 1),
-    y: (point.energy - 1) / 4  // Scale 1-5 to 0-1
+    y: (point.energy - minEnergy) / energyRange  // Scale to personalized range 0-1
   }));
   
   // We'll create a composite bezier curve with two cubic bezier segments:

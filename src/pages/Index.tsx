@@ -44,13 +44,17 @@ const Index = () => {
       const cycleLength = answers[1]?.value || "";
       const periodLength = answers[2]?.value || "";
       const peakEnergy = answers[3]?.value || "";
-      const lowestEnergy = answers[4]?.value || "";
-      const condition = answers[5]?.value || "";
+      const peakEnergyIntensity = answers[4]?.value || "";
+      const lowestEnergy = answers[5]?.value || "";
+      const lowEnergyIntensity = answers[6]?.value || "";
+      const condition = answers[7]?.value || "";
       setResults({
         cycleLength,
         periodLength,
         peakEnergy,
+        peakEnergyIntensity,
         lowestEnergy,
+        lowEnergyIntensity,
         condition
       });
 
