@@ -3,8 +3,6 @@ import { QuizResults } from "./quizData";
 interface ChartPoint {
   day: number;
   energy: number;
-  name: string;
-  description: string;
 }
 
 interface BezierPoint {
@@ -159,15 +157,15 @@ export const generateChartData = (results: QuizResults): ChartData => {
   const peakEnergyIntensity = parseFloat(results.peakEnergyIntensity) || 4.5;
   const lowEnergyIntensity = parseFloat(results.lowEnergyIntensity) || 1.5;
 
-  // Define the key points with all required properties
-  const keyPoints: ChartPoint[] = [
-    { day: startDay, energy: lowEnergyIntensity, name: "Cycle Start", description: "Day 1 - Beginning of your period" },
-    { day: peakDay, energy: peakEnergyIntensity, name: "Peak Energy", description: "Your highest energy point" },
-    { day: endDay, energy: lowEnergyIntensity, name: "Cycle End", description: `Day ${cycleLength} - End of your cycle` }
+  // Define the three key points as requested
+  const keyPoints = [
+    { day: startDay, energy: lowEnergyIntensity },    // Start point: day 1, personalized low energy
+    { day: peakDay, energy: peakEnergyIntensity },     // Peak energy point, personalized high energy
+    { day: endDay, energy: lowEnergyIntensity }       // End point: cycle end, personalized low energy
   ];
 
-  // Define control points with personalized energy levels (simplified version)
-  const controlPoints: SimplePoint[] = [
+  // Define control points with personalized energy levels
+  const controlPoints = [
     { day: periodEndDay, energy: (lowEnergyIntensity + peakEnergyIntensity) / 2 },  // End of period, moderate energy
     { day: Math.floor(cycleLength / 2), energy: peakEnergyIntensity * 0.8 }  // Ovulation, slightly below peak
   ];
@@ -187,9 +185,7 @@ export const generateChartData = (results: QuizResults): ChartData => {
     
     points.push({ 
       day, 
-      energy: closest.y * (peakEnergyIntensity - lowEnergyIntensity) + lowEnergyIntensity, // Scale to personalized range
-      name: `Day ${day}`,
-      description: `Energy level for day ${day}`
+      energy: closest.y * (peakEnergyIntensity - lowEnergyIntensity) + lowEnergyIntensity // Scale to personalized range
     });
   }
 
@@ -222,16 +218,10 @@ export const generateChartData = (results: QuizResults): ChartData => {
   };
 };
 
-// Simplified interface for control points (without name/description)
-interface SimplePoint {
-  day: number;
-  energy: number;
-}
-
 // Generate a simplified bezier curve with 3 key points and 2 control points
 const generateSimplifiedBezierCurve = (
   keyPoints: ChartPoint[], 
-  controlPoints: SimplePoint[], 
+  controlPoints: ChartPoint[], 
   cycleLength: number
 ): BezierPoint[] => {
   const bezierPoints: BezierPoint[] = [];

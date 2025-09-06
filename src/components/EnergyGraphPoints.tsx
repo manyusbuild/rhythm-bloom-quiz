@@ -41,25 +41,19 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     return padding.left + (day - 1) * (innerWidth / (chartData.cycleLength - 1));
   };
   
-  // Get energy range from chart data for dynamic scaling
-  const energyValues = chartData.points.map(p => p.energy);
-  const minEnergy = Math.min(...energyValues);
-  const maxEnergy = Math.max(...energyValues);
-  const energyRange = maxEnergy - minEnergy;
-  
   const yScale = (energy: number) => {
-    // Scale energy using dynamic range to svg coordinates (top to bottom)
-    return padding.top + (maxEnergy - energy) * (innerHeight / energyRange);
+    // Scale energy 0-5 to svg coordinates (top to bottom)
+    return padding.top + (5 - energy) * (innerHeight / 5);
   };
   
-  // Use actual energy values from chart data
-  const points: ChartPoint[] = chartData.points.map((point, index) => ({
-    index: index + 1,
-    name: point.name,
-    day: point.day,
-    energy: point.energy,
-    description: point.description
-  }));
+  // Calculate key points
+  const points: ChartPoint[] = [
+    { index: 1, name: "Cycle Start", day: 1, energy: 1, description: "Day 1 - Beginning of your period" },
+    { index: 2, name: "Period End", day: chartData.periodEndDay, energy: 3, description: "End of your menstrual flow" },
+    { index: 3, name: "Peak Energy", day: chartData.peakDay, energy: 5, description: "Your highest energy point" },
+    { index: 4, name: "Lowest Energy", day: chartData.lowestDay, energy: 1, description: "Your lowest energy point" },
+    { index: 5, name: "Cycle End", day: chartData.cycleLength, energy: 1, description: `Day ${chartData.cycleLength} - End of your cycle` }
+  ];
   
   // Function to generate grid lines - one vertical line per day
   const generateGridLines = () => {
@@ -82,19 +76,17 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
       );
     }
     
-    // Y-axis grid lines (for energy levels in the actual range)
-    const gridSteps = 5;
-    for (let i = 0; i <= gridSteps; i++) {
-      const energy = minEnergy + (i * energyRange / gridSteps);
+    // Y-axis grid lines (for each energy level)
+    for (let energy = 0; energy <= 5; energy++) {
       yLines.push(
         <line 
-          key={`y-${i}`}
+          key={`y-${energy}`}
           x1={padding.left} 
           y1={yScale(energy)} 
           x2={width - padding.right} 
           y2={yScale(energy)}
           stroke="#e2e8f0"
-          strokeDasharray={i === 0 ? "0" : "4"}
+          strokeDasharray={energy === 0 ? "0" : "4"}
         />
       );
     }
@@ -152,26 +144,15 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     return labels;
   };
   
-  // Function to generate y-axis labels with dynamic energy range
+  // Function to generate y-axis labels
   const generateYAxisLabels = () => {
     const labels = [];
-    const gridSteps = 4; // 5 labels (0-4)
+    const energyLabels = ["Very Low", "Low", "Moderate", "High", "Peak"];
     
-    for (let i = 0; i <= gridSteps; i++) {
-      const energy = maxEnergy - (i * energyRange / gridSteps);
-      let label;
-      
-      if (energy === maxEnergy) {
-        label = "Peak";
-      } else if (energy === minEnergy) {
-        label = "Low";
-      } else {
-        label = energy.toFixed(1);
-      }
-      
+    for (let energy = 1; energy <= 5; energy++) {
       labels.push(
         <text 
-          key={`y-${i}`} 
+          key={`y-${energy}`} 
           x={padding.left - 10} 
           y={yScale(energy)}
           textAnchor="end"
@@ -179,7 +160,7 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
           fontSize="12"
           fill="#64748b"
         >
-          {label}
+          {energyLabels[energy-1]}
         </text>
       );
     }
@@ -265,8 +246,8 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     const cp4x = T.x - (T.x - S.x) * 2;
     const cp4y = T.y;
     
-    // Calculate baseline y-value for minimum energy level
-    const baselineY = yScale(minEnergy);
+    // Calculate baseline y-value for energy level 1
+    const baselineY = yScale(1);
     
     // Build the path
     // Start at first point, follow bezier curve, go down to baseline, then back to start
@@ -316,8 +297,8 @@ const EnergyGraphPoints: React.FC<EnergyGraphPointsProps> = ({ results }) => {
     const cp4x = T.x - (T.x - S.x) * 2;
     const cp4y = T.y;
     
-    // Calculate top line y-value for maximum energy level
-    const topY = yScale(maxEnergy);
+    // Calculate top line y-value for energy level 5
+    const topY = yScale(5);
     
     // Build the path
     // Start at y=5 for first point's x, go down to curve, follow curve, then up to y=5 for last point's x, and back
